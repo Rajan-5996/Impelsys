@@ -1,0 +1,17 @@
+[tool.dagster]
+module_name = "reliability_pipeline.definitions"
+
+[project]
+name = "reliability-command-center-backend"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.13.20",
+    "dagster-webserver>=1.13.20",
+    "duckdb>=1.5.5",
+    "fastapi>=0.141.1",
+    "groq>=1.7.0",
+    "python-dotenv>=1.2.3",
+    "requests>=2.34.2",
+    "uvicorn>=0.52.4",
+]
