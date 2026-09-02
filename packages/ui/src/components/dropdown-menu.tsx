@@ -15,15 +15,17 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
 function DropdownMenuContent({
   className,
   align = "end",
+  side,
   sideOffset = 8,
   children,
   ...props
 }: MenuPrimitive.Popup.Props &
-  Pick<MenuPrimitive.Positioner.Props, "align" | "sideOffset">) {
+  Pick<MenuPrimitive.Positioner.Props, "align" | "side" | "sideOffset">) {
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
         align={align}
+        side={side}
         sideOffset={sideOffset}
         className="z-50"
       >
