@@ -1,3 +1,5 @@
+import type { SseEvent } from "@/lib/sse"
+
 export type StageKey = "ingestion" | "anomaly_detection" | "quality_check" | "etl" | "done"
 
 export const STAGE_ORDER: StageKey[] = [
@@ -8,11 +10,9 @@ export const STAGE_ORDER: StageKey[] = [
   "done",
 ]
 
-export type RunFlowEvent = {
-  event: string
+export type RunFlowEvent = SseEvent & {
   run_id?: string
   status?: string
-  [key: string]: unknown
 }
 
 export function normalizeStage(raw: string | null | undefined): StageKey {
@@ -97,16 +97,6 @@ export function describeEvent(event: RunFlowEvent): { stage?: StageKey; status?:
       return { status: "failed", message: typeof event.detail === "string" ? event.detail : "Run failed" }
     default:
       return { message: event.event }
-  }
-}
-
-export function parseSseRecord(record: string): RunFlowEvent | null {
-  const dataLine = record.split("\n").find((line) => line.startsWith("data:"))
-  if (!dataLine) return null
-  try {
-    return JSON.parse(dataLine.slice(dataLine.indexOf(":") + 1).trim()) as RunFlowEvent
-  } catch {
-    return null
   }
 }
 

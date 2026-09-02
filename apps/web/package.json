@@ -18,16 +18,20 @@
     "dotenv": "^17.4.2",
     "framer-motion": "^13.1.1",
     "lucide-react": "^1.38.0",
+    "papaparse": "^5.7.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-markdown": "^10.1.0",
     "react-redux": "^9.3.0",
     "react-router-dom": "^7.18.3",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^10",
     "@tailwindcss/vite": "^4",
     "@types/node": "^24",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",

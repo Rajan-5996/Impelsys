@@ -1,12 +1,12 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit"
 
 import { axiosInstance } from "@/lib/axios-instance"
+import { streamSsePost } from "@/lib/sse"
 import {
   describeEvent,
   isTerminalEvent,
   normalizeStage,
   messageForRunStatus,
-  parseSseRecord,
   type RunFlowEvent,
   type StageKey,
 } from "@/store/run-flow-events"
@@ -60,34 +60,11 @@ const initialState: RunFlowState = {
 export const triggerRunStream = createAsyncThunk(
   "runFlow/triggerRunStream",
   async (args: { onEvent?: (event: RunFlowEvent) => void } | undefined, { dispatch, rejectWithValue }) => {
-    let processedLength = 0
-    let buffer = ""
-
     try {
-      await axiosInstance.post(
-        "/api/smart-etl/runs",
-        {},
-        {
-          timeout: 0,
-          responseType: "text",
-          onDownloadProgress: (progressEvent) => {
-            const xhr = (progressEvent.event?.target ?? null) as XMLHttpRequest | null
-            const fullText = xhr?.responseText ?? ""
-            buffer += fullText.slice(processedLength)
-            processedLength = fullText.length
-
-            const records = buffer.split("\n\n")
-            buffer = records.pop() ?? ""
-
-            for (const record of records) {
-              const parsed = parseSseRecord(record)
-              if (!parsed) continue
-              dispatch(runEventReceived(parsed))
-              args?.onEvent?.(parsed)
-            }
-          },
-        }
-      )
+      await streamSsePost(axiosInstance, "/api/smart-etl/runs", {}, (parsed) => {
+        dispatch(runEventReceived(parsed as RunFlowEvent))
+        args?.onEvent?.(parsed as RunFlowEvent)
+      })
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to stream run."
       dispatch(runEventReceived({ event: "error", detail: message }))

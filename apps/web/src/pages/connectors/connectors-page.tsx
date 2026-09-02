@@ -7,6 +7,7 @@ import { cn } from "@workspace/ui/lib/utils"
 
 import { StatusChip } from "@/components/status-chip"
 import { CONNECTORS, type Connector, type ConnectorTint } from "@/pages/connectors/connectors-data"
+import { GithubConnectorPanel } from "@/pages/connectors/github-connector-panel"
 import { useAppDispatch } from "@/store/hooks"
 import { pushToast } from "@/store/ui-slice"
 
@@ -126,41 +127,47 @@ function ConnectorDetail({
           {connector.detail}
         </p>
 
-        <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-          <div className="border border-border p-3">
-            <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-              Owner
-            </p>
-            <p className="mt-0.5 text-[12px] font-semibold text-foreground">
-              {connector.owner}
-            </p>
-          </div>
-          <div className="border border-border p-3">
-            <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-              Last Sync
-            </p>
-            <p className="mt-0.5 text-[12px] font-semibold text-foreground">
-              {connector.lastSync}
-            </p>
-          </div>
-        </div>
+        {connector.id === "github" ? (
+          <GithubConnectorPanel />
+        ) : (
+          <>
+            <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-2">
+              <div className="border border-border p-3">
+                <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Owner
+                </p>
+                <p className="mt-0.5 text-[12px] font-semibold text-foreground">
+                  {connector.owner}
+                </p>
+              </div>
+              <div className="border border-border p-3">
+                <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  Last Sync
+                </p>
+                <p className="mt-0.5 text-[12px] font-semibold text-foreground">
+                  {connector.lastSync}
+                </p>
+              </div>
+            </div>
 
-        <Button
-          variant={isConnected ? "outline" : "default"}
-          size="sm"
-          onClick={() =>
-            dispatch(
-              pushToast(
-                isConnected
-                  ? `Disconnected from ${connector.name}.`
-                  : `Connected to ${connector.name}.`,
-                "success"
-              )
-            )
-          }
-        >
-          {isConnected ? "Disconnect" : "Connect"}
-        </Button>
+            <Button
+              variant={isConnected ? "outline" : "default"}
+              size="sm"
+              onClick={() =>
+                dispatch(
+                  pushToast(
+                    isConnected
+                      ? `Disconnected from ${connector.name}.`
+                      : `Connected to ${connector.name}.`,
+                    "success"
+                  )
+                )
+              }
+            >
+              {isConnected ? "Disconnect" : "Connect"}
+            </Button>
+          </>
+        )}
       </div>
     </motion.div>
   )
