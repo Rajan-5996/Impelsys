@@ -1,39 +1,76 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { BotIcon, XIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 
 import { AskAgentMessage } from "@/components/ask-agent/ask-agent-message"
-import { ASK_SUGGESTIONS, answerAskQuestion } from "@/components/ask-agent/ask-answer-engine"
+import { pathForScreenLink } from "@/constants/routes"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import {
+  askQuestion,
+  fetchAskSuggestions,
+  selectAskAnswerStatus,
+  selectAskSuggestions,
+} from "@/store/ask-slice"
 import { closeAsk, selectAsk, sendAskMessage } from "@/store/ui-slice"
 
 let messageCounter = 0
 
+const SCREEN_LABEL: Record<string, string> = {
+  supplier: "Open supplier",
+  dataset: "Open dataset",
+  scorecard: "Open scorecard",
+}
+
 export function AskAgentPanel() {
   const dispatch = useAppDispatch()
   const ask = useAppSelector(selectAsk)
+  const suggestions = useAppSelector(selectAskSuggestions)
+  const answerStatus = useAppSelector(selectAskAnswerStatus)
   const [draft, setDraft] = useState("")
+
+  useEffect(() => {
+    if (ask.open) dispatch(fetchAskSuggestions())
+  }, [dispatch, ask.open])
 
   if (!ask.open) return null
 
-  function ask_(question: string) {
+  async function ask_(question: string) {
     const trimmed = question.trim()
     if (!trimmed) return
-    const answer = answerAskQuestion(trimmed)
-    dispatch(
-      sendAskMessage([
-        { id: `ask-${messageCounter++}`, role: "user", text: trimmed },
-        {
-          id: `ask-${messageCounter++}`,
-          role: "agent",
-          text: answer.text,
-          link: answer.link,
-        },
-      ])
-    )
     setDraft("")
+    dispatch(
+      sendAskMessage([{ id: `ask-${messageCounter++}`, role: "user", text: trimmed }])
+    )
+    try {
+      const response = await dispatch(askQuestion(trimmed)).unwrap()
+      dispatch(
+        sendAskMessage([
+          {
+            id: `ask-${messageCounter++}`,
+            role: "agent",
+            text: response.answer,
+            link: response.link
+              ? {
+                  label: SCREEN_LABEL[response.link.screen] ?? "Open",
+                  path: pathForScreenLink(response.link.screen, response.link.id),
+                }
+              : undefined,
+          },
+        ])
+      )
+    } catch {
+      dispatch(
+        sendAskMessage([
+          {
+            id: `ask-${messageCounter++}`,
+            role: "agent",
+            text: "Sorry, I couldn't reach the DataOps agent just now.",
+          },
+        ])
+      )
+    }
   }
 
   return (
@@ -50,10 +87,13 @@ export function AskAgentPanel() {
         {ask.messages.map((message) => (
           <AskAgentMessage key={message.id} message={message} />
         ))}
+        {answerStatus === "loading" ? (
+          <div className="h-8 w-24 animate-pulse self-start rounded-md bg-muted/40" />
+        ) : null}
       </div>
       {ask.messages.length <= 1 ? (
         <div className="flex flex-col gap-1.5 px-3.5 pb-2.5">
-          {ASK_SUGGESTIONS.map((suggestion) => (
+          {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"

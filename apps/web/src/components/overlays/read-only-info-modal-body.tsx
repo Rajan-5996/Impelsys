@@ -1,13 +1,14 @@
+import { useEffect } from "react"
+
 import {
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog"
 
-import { KB_ARTICLES } from "@/data/knowledge"
-import { QUALITY_RULES } from "@/data/quality"
-import { useAppSelector } from "@/store/hooks"
-import { selectAuditLog } from "@/store/audit-slice"
+import { EmptyState } from "@/components/empty-state"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { fetchKbArticleById, selectCurrentKbArticle } from "@/store/knowledge-slice"
 import type { ModalDescriptor } from "@/store/ui-slice"
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -23,7 +24,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 type ReadOnlyDescriptor = Extract<
   ModalDescriptor,
-  { type: "affected-records" | "lineage" | "audit-detail" | "kb-article" | "help" }
+  { type: "audit-detail" | "kb-article" | "help" }
 >
 
 export function ReadOnlyInfoModalBody({
@@ -31,7 +32,14 @@ export function ReadOnlyInfoModalBody({
 }: {
   descriptor: ReadOnlyDescriptor
 }) {
-  const auditLog = useAppSelector(selectAuditLog)
+  const dispatch = useAppDispatch()
+  const currentArticle = useAppSelector(selectCurrentKbArticle)
+
+  useEffect(() => {
+    if (descriptor.type === "kb-article") {
+      dispatch(fetchKbArticleById(descriptor.articleId))
+    }
+  }, [dispatch, descriptor])
 
   if (descriptor.type === "help") {
     return (
@@ -42,9 +50,9 @@ export function ReadOnlyInfoModalBody({
         <div className="p-5 text-xs leading-relaxed text-muted-foreground">
           <p>
             The Command Center surfaces supplier feed health, pipeline
-            incidents, and data quality signals in one place. Use the sidebar
+            status, and data quality signals in one place. Use the sidebar
             to move between operational areas, and the Ask DataOps Agent panel
-            for natural-language questions about any incident or supplier.
+            for natural-language questions about any supplier or pipeline.
           </p>
         </div>
       </DialogContent>
@@ -52,26 +60,31 @@ export function ReadOnlyInfoModalBody({
   }
 
   if (descriptor.type === "kb-article") {
-    const article = KB_ARTICLES.find((item) => item.id === descriptor.articleId)
-    if (!article) return null
+    const article = currentArticle.data
     return (
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{article.id}</DialogTitle>
+          <DialogTitle>{descriptor.articleId}</DialogTitle>
         </DialogHeader>
         <div className="p-5">
-          <InfoRow label="Title" value={article.title} />
-          <InfoRow label="Type" value={article.type} />
-          <InfoRow label="Date" value={article.when} />
-          <InfoRow label="Status" value={article.tag} />
+          {currentArticle.status === "loading" || currentArticle.status === "idle" ? (
+            <div className="h-24 animate-pulse rounded-md bg-muted/40" />
+          ) : currentArticle.status === "failed" || !article ? (
+            <EmptyState message={currentArticle.error ?? "Article not found."} />
+          ) : (
+            <>
+              <InfoRow label="Title" value={article.title} />
+              <InfoRow label="Type" value={article.type} />
+              <InfoRow label="Summary" value={article.summary} />
+            </>
+          )}
         </div>
       </DialogContent>
     )
   }
 
   if (descriptor.type === "audit-detail") {
-    const entry = auditLog.find((row) => row.id === descriptor.entryId)
-    if (!entry) return null
+    const entry = descriptor.entry
     return (
       <DialogContent size="wide">
         <DialogHeader>
@@ -81,44 +94,18 @@ export function ReadOnlyInfoModalBody({
           <InfoRow label="Timestamp" value={entry.ts} />
           <InfoRow label="Agent" value={entry.agent} />
           <InfoRow label="Action" value={entry.action} />
-          <InfoRow label="Incident" value={entry.incident} />
-          <InfoRow label="Supplier" value={entry.supplier} />
-          <InfoRow label="Policy" value={entry.policy} />
-          <InfoRow label="Governance Mode" value={entry.mode} />
-          <InfoRow label="Approver" value={entry.approver} />
-          <InfoRow label="Human Decision" value={entry.decision} />
-          <InfoRow label="System Action / Evidence" value={entry.evidence} />
-          <InfoRow label="Recommendation" value={entry.reco} />
-          <InfoRow label="Outcome" value={entry.result} />
+          <InfoRow label="Supplier" value={entry.supplier ?? "—"} />
+          <InfoRow label="Policy" value={entry.policy ?? "—"} />
+          <InfoRow label="Governance Mode" value={entry.mode ?? "—"} />
+          <InfoRow label="Approver" value={entry.approver ?? "—"} />
+          <InfoRow label="Human Decision" value={entry.decision ?? "—"} />
+          <InfoRow label="System Action / Evidence" value={entry.evidence ?? "—"} />
+          <InfoRow label="Outcome" value={entry.result ?? "—"} />
+          <InfoRow label="Environment" value={entry.env ?? "—"} />
         </div>
       </DialogContent>
     )
   }
 
-  const rule = QUALITY_RULES.find((item) => item.rule === descriptor.ruleId)
-  if (!rule) return null
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>
-          {descriptor.type === "lineage" ? "Data Lineage" : "Affected Records"}
-        </DialogTitle>
-      </DialogHeader>
-      <div className="p-5">
-        <InfoRow label="Rule" value={rule.rule} />
-        <InfoRow label="Dataset" value={rule.dataset} />
-        <InfoRow label="Pipeline" value={rule.pipeline} />
-        {descriptor.type === "affected-records" ? (
-          <InfoRow label="Violations" value={`${rule.violations} of ${rule.checked} checked`} />
-        ) : (
-          <InfoRow
-            label="Upstream Source"
-            value={`${rule.dataset} is sourced from ${rule.pipeline} and validated against ${rule.dim}`}
-          />
-        )}
-        <InfoRow label="Note" value={rule.note} />
-      </div>
-    </DialogContent>
-  )
+  return null
 }

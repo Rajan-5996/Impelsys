@@ -1,3 +1,5 @@
+import { useEffect } from "react"
+
 import { Input } from "@workspace/ui/components/input"
 import {
   Select,
@@ -7,24 +9,18 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 
-import { METHODS, REGIONS } from "@/data/suppliers"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
+  fetchSupplierFilterOptions,
+  selectSupplierFilterOptions,
   selectSupplierFilters,
   setSupplierFilter,
   setSupplierSearch,
 } from "@/store/suppliers-slice"
 
-const STATUS_OPTIONS = [
-  "healthy",
-  "critical",
-  "investigating",
-  "delayed",
-  "missing",
-]
-const CRITICALITY_OPTIONS = ["Critical", "High", "Medium", "Low"]
+const TIER_OPTIONS = ["Preferred", "Approved", "Monitor", "At Risk"]
 
-type FilterKey = "region" | "method" | "status" | "criticality"
+type FilterKey = "region" | "method" | "tier"
 
 export function SupplierFilters({
   visibleCount,
@@ -35,6 +31,11 @@ export function SupplierFilters({
 }) {
   const dispatch = useAppDispatch()
   const filters = useAppSelector(selectSupplierFilters)
+  const filterOptions = useAppSelector(selectSupplierFilterOptions)
+
+  useEffect(() => {
+    dispatch(fetchSupplierFilterOptions())
+  }, [dispatch])
 
   function selectFor(key: FilterKey, label: string, options: string[]) {
     return (
@@ -67,10 +68,9 @@ export function SupplierFilters({
         placeholder="Search suppliers or feeds..."
         className="h-9 max-w-64 border border-border px-2.5"
       />
-      {selectFor("region", "Regions", REGIONS)}
-      {selectFor("method", "Methods", METHODS)}
-      {selectFor("status", "Statuses", STATUS_OPTIONS)}
-      {selectFor("criticality", "Criticality", CRITICALITY_OPTIONS)}
+      {selectFor("region", "Regions", filterOptions.regions)}
+      {selectFor("method", "Methods", filterOptions.deliveryMethods)}
+      {selectFor("tier", "Tiers", TIER_OPTIONS)}
       <span className="ml-auto text-[11px] font-semibold text-muted-foreground">
         {visibleCount} of {totalCount} suppliers
       </span>

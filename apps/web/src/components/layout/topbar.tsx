@@ -1,22 +1,39 @@
-import { MessageCircleIcon } from "lucide-react"
+import { useState } from "react"
+import { MessageCircleIcon, RefreshCwIcon } from "lucide-react"
 
-import { SidebarTrigger } from "@workspace/ui/components/sidebar"
+import { Button } from "@workspace/ui/components/button"
 
 import { LifecycleStepper } from "@/components/lifecycle"
 import { GlobalSearch } from "@/components/layout/global-search"
 import { NotificationBell } from "@/components/layout/notification-bell"
 import { useAppDispatch } from "@/store/hooks"
-import { openAsk } from "@/store/ui-slice"
+import { openAsk, pushToast } from "@/store/ui-slice"
 
 export function Topbar() {
   const dispatch = useAppDispatch()
+  const [updatedAt, setUpdatedAt] = useState(() => new Date())
 
   return (
     <div className="sticky top-0 z-30 flex flex-col bg-card">
       <div className="flex h-14 items-center gap-3 border-b border-border px-4">
-        <SidebarTrigger />
         <GlobalSearch />
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-[10.5px] text-muted-foreground">
+            Updated {updatedAt.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setUpdatedAt(new Date())
+              dispatch(pushToast("Data refreshed", "info"))
+            }}
+          >
+            <RefreshCwIcon /> Refresh
+          </Button>
           <button
             type="button"
             onClick={() => dispatch(openAsk())}

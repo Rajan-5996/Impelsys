@@ -1,4 +1,4 @@
-import type { KbArticle, Policy } from "@/data/knowledge"
+import type { KbArticle, Policy } from "@/store/knowledge-slice"
 
 type KbItemProps = {
   article: KbArticle
@@ -17,14 +17,14 @@ export function KbItem({ article, onClick }: KbItemProps) {
           {article.id}
         </span>
         <span className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-          {article.tag}
+          {article.type}
         </span>
       </div>
       <p className="mt-1 text-[12.5px] font-medium text-foreground">
         {article.title}
       </p>
       <p className="mt-1 text-[10.5px] text-muted-foreground">
-        {article.type} &middot; {article.when}
+        {article.summary}
       </p>
     </button>
   )
@@ -32,9 +32,10 @@ export function KbItem({ article, onClick }: KbItemProps) {
 
 type PolicyCardProps = {
   policy: Policy
+  footer?: React.ReactNode
 }
 
-export function PolicyCard({ policy }: PolicyCardProps) {
+export function PolicyCard({ policy, footer }: PolicyCardProps) {
   return (
     <div className="mb-2.5 border border-border p-3.5 last:mb-0">
       <div className="flex items-start justify-between gap-2.5">
@@ -53,10 +54,11 @@ export function PolicyCard({ policy }: PolicyCardProps) {
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2.5 border-t border-border pt-2.5 sm:grid-cols-4">
         <PolicyMeta label="Owner" value={policy.owner} />
-        <PolicyMeta label="Effective" value={policy.effective} />
-        <PolicyMeta label="Approval" value={policy.approval} />
-        <PolicyMeta label="Pipelines" value={policy.pipelines} />
+        <PolicyMeta label="Effective" value={policy.effectiveDate} />
+        <PolicyMeta label="Approval" value={policy.approvalMode} />
+        <PolicyMeta label="Pipelines" value={policy.applicablePipelines.join(", ")} />
       </div>
+      {footer}
     </div>
   )
 }

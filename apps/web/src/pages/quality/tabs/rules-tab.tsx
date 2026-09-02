@@ -1,43 +1,48 @@
+import { useEffect } from "react"
+
 import { DataTable, type DataTableColumn } from "@/components/data-table"
-import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
-import { QUALITY_RULES, type QualityRule } from "@/data/quality"
-import { useAppDispatch } from "@/store/hooks"
+import { EmptyState } from "@/components/empty-state"
+import { StatusChip } from "@/components/status-chip"
+import { fetchFailedRules, selectFailedRules, type FailedRule } from "@/store/quality-detail-slice"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { openModal } from "@/store/ui-slice"
-
-const STATUS_VARIANT: Record<QualityRule["status"], StatusChipVariant> = {
-  Passed: "passed",
-  Warning: "warning",
-  Failed: "failed",
-}
-
-const rows = QUALITY_RULES.filter((rule) => rule.status !== "Passed")
 
 export function RulesTab() {
   const dispatch = useAppDispatch()
+  const { data: rows, status, error } = useAppSelector(selectFailedRules)
 
-  const columns: DataTableColumn<QualityRule>[] = [
-    { key: "rule", header: "Rule", render: (row) => row.rule },
-    { key: "dim", header: "Dimension", render: (row) => row.dim },
+  useEffect(() => {
+    dispatch(fetchFailedRules())
+  }, [dispatch])
+
+  if (status === "failed") {
+    return <EmptyState message={error ?? "Failed to load failed rules."} />
+  }
+
+  if (status === "loading" || status === "idle") {
+    return <div className="h-40 animate-pulse rounded-md bg-muted/40" />
+  }
+
+  const columns: DataTableColumn<FailedRule>[] = [
+    { key: "ruleCode", header: "Rule", render: (row) => row.ruleCode },
+    { key: "description", header: "Description", render: (row) => row.description },
     { key: "dataset", header: "Dataset", render: (row) => row.dataset },
-    { key: "pipeline", header: "Pipeline", render: (row) => row.pipeline },
     {
-      key: "checked",
+      key: "checkedCount",
       header: "Checked",
       align: "right",
-      render: (row) => row.checked.toLocaleString(),
+      render: (row) => row.checkedCount.toLocaleString(),
     },
     {
-      key: "violations",
-      header: "Violations",
+      key: "affectedCount",
+      header: "Affected",
       align: "right",
-      render: (row) => row.violations.toLocaleString(),
+      render: (row) => row.affectedCount.toLocaleString(),
     },
     {
       key: "status",
       header: "Status",
-      render: (row) => (
-        <StatusChip variant={STATUS_VARIANT[row.status]}>{row.status}</StatusChip>
-      ),
+      render: (row) => <StatusChip variant="failed">{row.status}</StatusChip>,
     },
     {
       key: "actions",
@@ -47,7 +52,7 @@ export function RulesTab() {
           <button
             type="button"
             onClick={() =>
-              dispatch(openModal({ type: "affected-records", ruleId: row.rule }))
+              dispatch(openModal({ type: "affected-records", ruleCode: row.ruleCode }))
             }
             className="text-[11px] font-semibold text-primary hover:underline"
           >
@@ -56,7 +61,7 @@ export function RulesTab() {
           <button
             type="button"
             onClick={() =>
-              dispatch(openModal({ type: "lineage", ruleId: row.rule }))
+              dispatch(openModal({ type: "lineage", datasetId: row.dataset }))
             }
             className="text-[11px] font-semibold text-primary hover:underline"
           >
@@ -71,7 +76,7 @@ export function RulesTab() {
     <DataTable
       columns={columns}
       rows={rows}
-      rowKey={(row) => row.rule}
+      rowKey={(row) => row.ruleCode}
       emptyMessage="No open quality rule violations."
     />
   )

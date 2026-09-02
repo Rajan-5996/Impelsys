@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { SearchIcon } from "lucide-react"
 
 import { Input } from "@workspace/ui/components/input"
@@ -5,13 +6,17 @@ import { Input } from "@workspace/ui/components/input"
 import { EmptyState } from "@/components/empty-state"
 import { KbItem } from "@/components/knowledge-cards"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { selectKbArticles, selectKbSearch, setKbSearch } from "@/store/knowledge-slice"
+import { fetchKbArticles, selectKbArticles, selectKbSearch, setKbSearch } from "@/store/knowledge-slice"
 import { openModal } from "@/store/ui-slice"
 
 export function KnowledgeBaseTab() {
   const dispatch = useAppDispatch()
   const search = useAppSelector(selectKbSearch)
-  const articles = useAppSelector(selectKbArticles)
+  const { data: articles, status, error } = useAppSelector(selectKbArticles)
+
+  useEffect(() => {
+    dispatch(fetchKbArticles())
+  }, [dispatch])
 
   const query = search.trim().toLowerCase()
   const filtered = query
@@ -33,7 +38,11 @@ export function KnowledgeBaseTab() {
           className="border-b-0"
         />
       </div>
-      {filtered.length === 0 ? (
+      {status === "failed" ? (
+        <EmptyState message={error ?? "Failed to load knowledge base articles."} />
+      ) : status === "loading" || status === "idle" ? (
+        <div className="h-40 animate-pulse rounded-md bg-muted/40" />
+      ) : filtered.length === 0 ? (
         <EmptyState message="No knowledge base articles match your search." />
       ) : (
         filtered.map((article) => (

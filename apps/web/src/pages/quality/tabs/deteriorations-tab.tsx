@@ -1,8 +1,16 @@
-import { DataTable, type DataTableColumn } from "@/components/data-table"
-import { TrendBadge } from "@/components/metrics"
-import { DETERIORATIONS, type Deterioration } from "@/data/quality"
+import { useEffect } from "react"
 
-const columns: DataTableColumn<Deterioration>[] = [
+import { DataTable, type DataTableColumn } from "@/components/data-table"
+import { EmptyState } from "@/components/empty-state"
+import { TrendBadge } from "@/components/metrics"
+import {
+  fetchQualityDeteriorations,
+  selectQualityDeteriorations,
+  type QualityDeterioration,
+} from "@/store/quality-slice"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+
+const columns: DataTableColumn<QualityDeterioration>[] = [
   { key: "entity", header: "Entity", render: (row) => row.entity },
   { key: "metric", header: "Metric", render: (row) => row.metric },
   {
@@ -22,10 +30,25 @@ const columns: DataTableColumn<Deterioration>[] = [
 ]
 
 export function DeteriorationsTab() {
+  const dispatch = useAppDispatch()
+  const { data: rows, status, error } = useAppSelector(selectQualityDeteriorations)
+
+  useEffect(() => {
+    dispatch(fetchQualityDeteriorations())
+  }, [dispatch])
+
+  if (status === "failed") {
+    return <EmptyState message={error ?? "Failed to load deteriorations."} />
+  }
+
+  if (status === "loading" || status === "idle") {
+    return <div className="h-40 animate-pulse rounded-md bg-muted/40" />
+  }
+
   return (
     <DataTable
       columns={columns}
-      rows={DETERIORATIONS}
+      rows={rows}
       rowKey={(row) => `${row.entity}-${row.metric}`}
       emptyMessage="No deteriorations detected."
     />

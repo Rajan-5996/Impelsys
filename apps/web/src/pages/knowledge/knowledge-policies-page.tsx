@@ -1,6 +1,11 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
+import {
+  Tabs,
+  TabsContent,
+  TabsIndicator,
+  TabsList,
+  TabsTrigger,
+} from "@workspace/ui/components/tabs"
 
-import { Breadcrumbs } from "@/components/breadcrumbs"
 import { KnowledgeBaseTab } from "@/pages/knowledge/tabs/knowledge-base-tab"
 import { PoliciesTab } from "@/pages/knowledge/tabs/policies-tab"
 import { SourcesTab } from "@/pages/knowledge/tabs/sources-tab"
@@ -23,7 +28,6 @@ export function KnowledgePoliciesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Breadcrumbs trail={[{ label: "Knowledge & Policies" }]} />
       <div>
         <h1 className="text-lg font-semibold text-foreground">
           Knowledge & Policies
@@ -46,6 +50,7 @@ export function KnowledgePoliciesPage() {
               {TAB_LABELS[tab]}
             </TabsTrigger>
           ))}
+          <TabsIndicator />
         </TabsList>
         <TabsContent value="sources">
           <SourcesTab />

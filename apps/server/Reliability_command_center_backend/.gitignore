@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-.env
-sales_pipeline.duckdb
-data/curated/*.parquet
-.dagster_home/
-.tmp_dagster_home_*/
-dagster_dev.log
-run_dev_test.log

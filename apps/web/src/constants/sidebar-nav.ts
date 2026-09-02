@@ -4,9 +4,11 @@ import {
   FileText,
   GitBranch,
   LayoutGrid,
+  PlugZap,
   Radar,
   Settings,
   ShieldCheck,
+  Siren,
   Star,
 } from "lucide-react"
 
@@ -28,9 +30,10 @@ export const navGroups: NavGroup[] = [
   {
     label: "Operate",
     items: [
-      { title: "Command Center", path: ROUTES.commandCenter, icon: LayoutGrid },
+      { title: "Dashboard", path: ROUTES.commandCenter, icon: LayoutGrid },
       { title: "Supplier Monitor", path: ROUTES.suppliers, icon: Radar },
       { title: "Pipeline Operations", path: ROUTES.pipeline, icon: GitBranch },
+      { title: "Connectors", path: ROUTES.connectors, icon: PlugZap },
       { title: "Data Quality", path: ROUTES.quality, icon: ShieldCheck },
     ],
   },
@@ -38,6 +41,7 @@ export const navGroups: NavGroup[] = [
     label: "Insight",
     items: [
       { title: "Supplier Scorecards", path: ROUTES.scorecards, icon: Star },
+      { title: "Incidents", path: ROUTES.incidents, icon: Siren },
       { title: "Agent Workspace", path: ROUTES.agents, icon: Briefcase },
     ],
   },

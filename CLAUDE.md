@@ -18,9 +18,9 @@
 
 - The app's color tokens are defined once in `packages/ui/src/styles/globals.css` (`:root` and `.dark`) and exposed as Tailwind utilities via the `@theme inline` block. Never hardcode a hex/oklch color value in a component — use the Tailwind classes below so every screen stays on the same palette.
 - Brand colors (constant across light/dark mode):
-  - `primary` (`#283618`) / `primary-foreground` (`#fefae0`) — use via `bg-primary`, `text-primary-foreground`.
-  - `secondary` (`#fefae0`) / `secondary-foreground` (`#283618`) — use via `bg-secondary`, `text-secondary-foreground`.
-  - `standard` (`#606c38`) / `standard-foreground` (`#fefae0`) — use via `bg-standard`, `text-standard-foreground`.
-  - `accent` (`#bc6c25`) / `accent-foreground` (`#fefae0`) — use via `bg-accent`, `text-accent-foreground`.
-  - `warning` (`#dda15e`) / `warning-foreground` (`#283618`) — use via `bg-warning`, `text-warning-foreground`.
+  - `primary` (`#7030B1`) / `primary-foreground` (`#E2E8F0`) — use via `bg-primary`, `text-primary-foreground`.
+  - `secondary` (`#E2E8F0`) / `secondary-foreground` (`#7030B1`) — use via `bg-secondary`, `text-secondary-foreground`.
+  - `standard` (`#6F2B8B`) / `standard-foreground` (`#E2E8F0`) — use via `bg-standard`, `text-standard-foreground`.
+  - `accent` (`#B56DD3`) / `accent-foreground` (`#1F1F1F`) — use via `bg-accent`, `text-accent-foreground`.
+  - `warning` (`#1F1F1F`) / `warning-foreground` (`#E2E8F0`) — use via `bg-warning`, `text-warning-foreground`.
 - If a new semantic color is ever needed, add it as a new `--name`/`--name-foreground` pair in `globals.css` (both `:root` and `.dark`) and register it in `@theme inline`, following the same pattern as the tokens above — don't introduce a one-off color inline in a component.

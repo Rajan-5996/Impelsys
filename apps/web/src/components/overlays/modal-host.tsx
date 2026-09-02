@@ -1,8 +1,6 @@
 import { Dialog } from "@workspace/ui/components/dialog"
 
-import { CompareResolutionModalBody } from "@/components/overlays/compare-resolution-modal-body"
-import { ConfirmDialogBody } from "@/components/overlays/confirm-dialog-body"
-import { ModifyActionModalBody } from "@/components/overlays/modify-action-modal-body"
+import { QualityInfoModalBody } from "@/components/overlays/quality-info-modal-body"
 import { ReadOnlyInfoModalBody } from "@/components/overlays/read-only-info-modal-body"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { closeModal, selectModal } from "@/store/ui-slice"
@@ -18,17 +16,11 @@ export function ModalHost() {
         if (!open) dispatch(closeModal())
       }}
     >
-      {modal?.type === "confirm" ? (
-        <ConfirmDialogBody action={modal.action} />
-      ) : null}
-      {modal?.type === "modify-action" ? <ModifyActionModalBody /> : null}
-      {modal?.type === "compare-resolution" ? (
-        <CompareResolutionModalBody similarId={modal.similarId} />
+      {modal?.type === "affected-records" || modal?.type === "lineage" ? (
+        <QualityInfoModalBody descriptor={modal} />
       ) : null}
       {modal &&
-      (modal.type === "affected-records" ||
-        modal.type === "lineage" ||
-        modal.type === "audit-detail" ||
+      (modal.type === "audit-detail" ||
         modal.type === "kb-article" ||
         modal.type === "help") ? (
         <ReadOnlyInfoModalBody descriptor={modal} />

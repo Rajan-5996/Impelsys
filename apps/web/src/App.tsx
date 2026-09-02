@@ -15,7 +15,9 @@ import { ROUTES } from "@/constants/routes"
 import { AgentWorkspacePage } from "@/pages/agents/agent-workspace-page"
 import { AuditGovernancePage } from "@/pages/audit/audit-governance-page"
 import { CommandCenterPage } from "@/pages/command-center/command-center-page"
-import { IncidentWorkspacePage } from "@/pages/incidents/incident-workspace-page"
+import { ConnectorsPage } from "@/pages/connectors/connectors-page"
+import { IncidentsPage } from "@/pages/incidents/incidents-page"
+import { RunDetailPage } from "@/pages/incidents/run-detail-page"
 import { KnowledgePoliciesPage } from "@/pages/knowledge/knowledge-policies-page"
 import { PipelineOperationsPage } from "@/pages/pipeline/pipeline-operations-page"
 import { DatasetDetailPage } from "@/pages/quality/dataset-detail/dataset-detail-page"
@@ -40,7 +42,9 @@ export function App() {
               element={<SupplierDetailPage />}
             />
             <Route path={ROUTES.pipeline} element={<PipelineOperationsPage />} />
-            <Route path={ROUTES.incident} element={<IncidentWorkspacePage />} />
+            <Route path={ROUTES.connectors} element={<ConnectorsPage />} />
+            <Route path={ROUTES.incidents} element={<IncidentsPage />} />
+            <Route path={ROUTES.runDetail} element={<RunDetailPage />} />
             <Route path={ROUTES.quality} element={<DataQualityPage />} />
             <Route
               path={ROUTES.datasetDetail}

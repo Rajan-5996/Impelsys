@@ -1,15 +1,13 @@
-import { useMemo, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { SearchIcon } from "lucide-react"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover"
 
 import { EmptyState } from "@/components/empty-state"
-import { datasetDetailPath, incidentPath, supplierDetailPath } from "@/constants/routes"
-import { DATASETS } from "@/data/quality"
-import { POLICIES } from "@/data/knowledge"
-import { QUALITY_RULES } from "@/data/quality"
-import { SUPPLIERS } from "@/data/suppliers"
+import { datasetDetailPath, supplierDetailPath } from "@/constants/routes"
+import { fetchSearchResults, selectSearchResults, selectSearchStatus } from "@/store/search-slice"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
 
 type SearchResult = {
   group: string
@@ -18,95 +16,58 @@ type SearchResult = {
   path: string
 }
 
-function buildResults(query: string): SearchResult[] {
-  const q = query.trim().toLowerCase()
-  if (!q) return []
-
-  const results: SearchResult[] = []
-
-  for (const supplier of SUPPLIERS) {
-    if (supplier.name.toLowerCase().includes(q)) {
-      results.push({
-        group: "Suppliers",
-        label: supplier.name,
-        meta: supplier.feed,
-        path: supplierDetailPath(supplier.id),
-      })
-    }
-  }
-
-  if ("northstar data".includes(q) || "inc-2026-0901-01".includes(q)) {
-    results.push({
-      group: "Incidents",
-      label: "INC-2026-0901-01 - NorthStar Data",
-      meta: "Critical volume anomaly",
-      path: incidentPath("northstar"),
-    })
-  }
-  if ("datasphere".includes(q) || "inc-2026-0901-02".includes(q) || "customer validation".includes(q)) {
-    results.push({
-      group: "Incidents",
-      label: "INC-2026-0901-02 - DataSphere",
-      meta: "Customer Validation failure",
-      path: incidentPath("etl"),
-    })
-  }
-
-  for (const dataset of DATASETS) {
-    if (dataset.name.toLowerCase().includes(q)) {
-      results.push({
-        group: "Datasets",
-        label: dataset.name,
-        meta: dataset.pipeline,
-        path: datasetDetailPath(dataset.id),
-      })
-    }
-  }
-
-  for (const rule of QUALITY_RULES) {
-    if (rule.rule.toLowerCase().includes(q)) {
-      results.push({
-        group: "Quality Rules",
-        label: rule.rule,
-        meta: rule.dataset,
-        path: "/quality",
-      })
-    }
-  }
-
-  for (const policy of POLICIES) {
-    if (policy.title.toLowerCase().includes(q)) {
-      results.push({
-        group: "Policies",
-        label: policy.title,
-        meta: policy.id,
-        path: "/knowledge",
-      })
-    }
-  }
-
-  return results.slice(0, 12)
+function toResults(results: ReturnType<typeof selectSearchResults>): SearchResult[] {
+  return [
+    ...results.suppliers.map((s) => ({
+      group: "Suppliers",
+      label: s.name,
+      meta: s.id,
+      path: supplierDetailPath(s.id),
+    })),
+    ...results.pipelines.map((p) => ({
+      group: "Pipelines",
+      label: p.name,
+      meta: p.isReal ? "Live pipeline" : "Mock pipeline",
+      path: "/pipeline",
+    })),
+    ...results.datasets.map((d) => ({
+      group: "Datasets",
+      label: d.name,
+      meta: d.id,
+      path: datasetDetailPath(d.id),
+    })),
+    ...results.policies.map((p) => ({
+      group: "Policies",
+      label: p.title,
+      meta: p.id,
+      path: "/knowledge",
+    })),
+  ]
 }
 
 export function GlobalSearch() {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
-  const results = useMemo(() => buildResults(query), [query])
-  const grouped = useMemo(() => {
-    const groups = new Map<string, SearchResult[]>()
-    for (const result of results) {
-      const list = groups.get(result.group) ?? []
-      list.push(result)
-      groups.set(result.group, list)
-    }
-    return Array.from(groups.entries())
-  }, [results])
+  const results = useAppSelector(selectSearchResults)
+  const status = useAppSelector(selectSearchStatus)
+  const debounceRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    window.clearTimeout(debounceRef.current)
+    debounceRef.current = window.setTimeout(() => {
+      dispatch(fetchSearchResults(query))
+    }, 250)
+    return () => window.clearTimeout(debounceRef.current)
+  }, [dispatch, query])
+
+  const grouped = groupResults(toResults(results))
 
   return (
     <Popover open={open && query.length > 0} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="w-full max-w-[420px]"
+        className="min-w-0 flex-1 max-w-[420px]"
         render={<div />}
         nativeButton={false}
       >
@@ -119,13 +80,19 @@ export function GlobalSearch() {
               setOpen(true)
             }}
             onFocus={() => setOpen(true)}
-            placeholder="Search suppliers, incidents, datasets, policies..."
+            placeholder="Search suppliers, datasets, policies..."
             className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[420px] max-h-[420px] overflow-y-auto p-0">
-        {results.length === 0 ? (
+      <PopoverContent
+        align="start"
+        initialFocus={false}
+        className="w-[420px] max-h-[420px] overflow-y-auto p-0"
+      >
+        {status === "loading" ? (
+          <div className="h-16 animate-pulse rounded-md bg-muted/40 m-2" />
+        ) : grouped.length === 0 ? (
           <EmptyState message="No matches found." />
         ) : (
           grouped.map(([group, items]) => (
@@ -133,9 +100,9 @@ export function GlobalSearch() {
               <p className="px-3.5 pt-2.5 pb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
                 {group}
               </p>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <button
-                  key={`${item.group}-${item.label}`}
+                  key={`${item.group}-${item.label}-${index}`}
                   type="button"
                   onClick={() => {
                     navigate(item.path)
@@ -144,12 +111,8 @@ export function GlobalSearch() {
                   }}
                   className="block w-full px-3.5 py-2 text-left hover:bg-muted/40"
                 >
-                  <p className="text-xs font-semibold text-foreground">
-                    {item.label}
-                  </p>
-                  <p className="text-[10.5px] text-muted-foreground">
-                    {item.meta}
-                  </p>
+                  <p className="text-xs font-semibold text-foreground">{item.label}</p>
+                  <p className="text-[10.5px] text-muted-foreground">{item.meta}</p>
                 </button>
               ))}
             </div>
@@ -158,4 +121,14 @@ export function GlobalSearch() {
       </PopoverContent>
     </Popover>
   )
+}
+
+function groupResults(results: SearchResult[]): [string, SearchResult[]][] {
+  const groups = new Map<string, SearchResult[]>()
+  for (const result of results) {
+    const list = groups.get(result.group) ?? []
+    list.push(result)
+    groups.set(result.group, list)
+  }
+  return Array.from(groups.entries())
 }

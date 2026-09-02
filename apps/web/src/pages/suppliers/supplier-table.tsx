@@ -1,43 +1,42 @@
 import { useNavigate } from "react-router-dom"
 
-import { cn } from "@workspace/ui/lib/utils"
-
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { Pagination } from "@/components/pagination"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { supplierDetailPath } from "@/constants/routes"
-import type { Supplier } from "@/data/suppliers"
 import { getVisibleSuppliers } from "@/pages/suppliers/supplier-filtering"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
   selectSupplierFilters,
+  selectSuppliersList,
   setSupplierPage,
   setSupplierSort,
+  type Supplier,
   type SupplierSortKey,
 } from "@/store/suppliers-slice"
 
-const CRITICALITY_VARIANT: Record<Supplier["criticality"], StatusChipVariant> = {
-  Critical: "critical",
-  High: "high",
-  Medium: "medium",
-  Low: "low",
+const TIER_VARIANT: Record<Supplier["tier"], StatusChipVariant> = {
+  Preferred: "preferred",
+  Approved: "approved",
+  Monitor: "monitor",
+  "At Risk": "atrisk",
 }
 
-const HEALTH_VARIANT: Record<Supplier["statusToday"], StatusChipVariant> = {
-  healthy: "ok",
-  critical: "critical",
-  investigating: "medium",
-  delayed: "medium",
-  missing: "critical",
+const HEALTH_STATUS_VARIANT: Record<string, StatusChipVariant> = {
+  Healthy: "ok",
+  "Volume Anomaly": "critical",
+  "Missing Feed": "critical",
+  "Under Investigation": "medium",
+  "Schema Change": "medium",
 }
 
 export function SupplierTable() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const filters = useAppSelector(selectSupplierFilters)
+  const suppliers = useAppSelector(selectSuppliersList)
 
-  const sorted = getVisibleSuppliers(filters)
-  const filtered = sorted
+  const sorted = getVisibleSuppliers(suppliers, filters)
   const start = (filters.page - 1) * filters.pageSize
   const pageRows = sorted.slice(start, start + filters.pageSize)
 
@@ -49,56 +48,29 @@ export function SupplierTable() {
       render: (row) => <span className="font-semibold text-foreground">{row.name}</span>,
     },
     { key: "feed", header: "Feed", sortable: true, render: (row) => row.feed },
-    { key: "region", header: "Region", render: (row) => row.region },
+    { key: "region", header: "Region", sortable: true, render: (row) => row.region },
+    { key: "deliveryMethod", header: "Method", render: (row) => row.deliveryMethod },
     {
-      key: "criticality",
-      header: "Criticality",
+      key: "tier",
+      header: "Tier",
       sortable: true,
       render: (row) => (
-        <StatusChip variant={CRITICALITY_VARIANT[row.criticality]}>
-          {row.criticality}
-        </StatusChip>
+        <StatusChip variant={TIER_VARIANT[row.tier]}>{row.tier}</StatusChip>
       ),
     },
-    {
-      key: "volume",
-      header: "Expected / Actual Volume",
-      align: "right",
-      render: (row) => (
-        <span className="font-mono text-[11px]">
-          {row.avgVolume.toLocaleString()} / {row.actual.toLocaleString()}
-        </span>
-      ),
-    },
-    {
-      key: "deviation",
-      header: "Deviation",
-      sortable: true,
-      align: "right",
-      render: (row) => (
-        <span
-          className={cn(
-            "font-mono text-[11px] font-semibold",
-            row.deviation !== null && Math.abs(row.deviation) > 20
-              ? "text-status-critical-ink"
-              : row.deviation !== null && Math.abs(row.deviation) > 5
-                ? "text-status-warning-foreground"
-                : "text-foreground"
-          )}
-        >
-          {row.deviation === null ? "N/A" : `${row.deviation}%`}
-        </span>
-      ),
-    },
-    { key: "schema", header: "Schema Status", render: (row) => row.schemaStatus },
-    { key: "agent", header: "Agent Status", render: (row) => row.agentStatus },
     {
       key: "score",
-      header: "Health",
+      header: "Score",
       sortable: true,
+      align: "right",
+      render: (row) => <span className="font-mono text-[11px]">{row.score}</span>,
+    },
+    {
+      key: "healthStatus",
+      header: "Health",
       render: (row) => (
-        <StatusChip variant={HEALTH_VARIANT[row.statusToday]}>
-          {row.statusToday}
+        <StatusChip variant={HEALTH_STATUS_VARIANT[row.healthStatus] ?? "medium"}>
+          {row.healthStatus}
         </StatusChip>
       ),
     },
@@ -119,7 +91,7 @@ export function SupplierTable() {
       <Pagination
         page={filters.page}
         pageSize={filters.pageSize}
-        total={filtered.length}
+        total={sorted.length}
         onPageChange={(page) => dispatch(setSupplierPage(page))}
       />
     </div>

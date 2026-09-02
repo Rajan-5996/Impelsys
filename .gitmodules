@@ -1,0 +1,3 @@
+[submodule "apps/server/impelsys-backend"]
+	path = apps/server/impelsys-backend
+	url = https://github.com/GWC-AI-Agents/Impelsys-backend.git

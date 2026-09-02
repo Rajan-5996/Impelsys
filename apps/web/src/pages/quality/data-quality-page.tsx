@@ -1,6 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 
-import { Breadcrumbs } from "@/components/breadcrumbs"
 import { QualityDimensionGrid } from "@/pages/quality/quality-dimension-grid"
 import { QualityKpiRow } from "@/pages/quality/quality-kpi-row"
 import { DatasetTab } from "@/pages/quality/tabs/dataset-tab"
@@ -25,7 +24,6 @@ export function DataQualityPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Breadcrumbs trail={[{ label: "Data Quality" }]} />
       <div>
         <h1 className="text-lg font-semibold text-foreground">Data Quality</h1>
         <p className="mt-0.5 text-[11.5px] text-muted-foreground">

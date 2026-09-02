@@ -1,38 +1,39 @@
+import { useEffect } from "react"
 import { DownloadIcon } from "lucide-react"
+import { shallowEqual } from "react-redux"
 
 import { Button } from "@workspace/ui/components/button"
 
-import { Breadcrumbs } from "@/components/breadcrumbs"
 import { AuditFilters } from "@/pages/audit/audit-filters"
 import { AuditTable } from "@/pages/audit/audit-table"
-import { filterAuditLog } from "@/pages/audit/filter-audit-log"
-import { useAppSelector } from "@/store/hooks"
-import { selectAuditFilters, selectAuditLog } from "@/store/audit-slice"
+import { auditQueryFrom, fetchAuditLog, selectAuditEntries } from "@/store/audit-slice"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import type { ActivityFeedEntry } from "@/store/command-center-slice"
 
-function exportAuditCsv(rows: ReturnType<typeof filterAuditLog>) {
+function exportAuditCsv(rows: ActivityFeedEntry[]) {
   const header = [
     "Timestamp",
     "Agent",
     "Action",
-    "Incident",
     "Supplier",
     "Policy",
     "Mode",
     "Approver",
     "Decision",
     "Result",
+    "Environment",
   ]
   const body = rows.map((row) => [
     row.ts,
     row.agent,
     row.action,
-    row.incident,
-    row.supplier,
-    row.policy,
-    row.mode,
-    row.approver,
-    row.decision,
-    row.result,
+    row.supplier ?? "",
+    row.policy ?? "",
+    row.mode ?? "",
+    row.approver ?? "",
+    row.decision ?? "",
+    row.result ?? "",
+    row.env ?? "",
   ])
 
   const csv = [header, ...body]
@@ -44,21 +45,23 @@ function exportAuditCsv(rows: ReturnType<typeof filterAuditLog>) {
   const link = document.createElement("a")
   link.href = url
   link.download = "audit-log.csv"
-  document.body.appendChild(link)
   link.click()
-  document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 
 export function AuditGovernancePage() {
-  const log = useAppSelector(selectAuditLog)
-  const filters = useAppSelector(selectAuditFilters)
+  const dispatch = useAppDispatch()
+  const query = useAppSelector(auditQueryFrom, shallowEqual)
+  const entries = useAppSelector(selectAuditEntries)
+
+  useEffect(() => {
+    dispatch(fetchAuditLog(query))
+  }, [dispatch, query])
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <Breadcrumbs trail={[{ label: "Audit & Governance" }]} />
           <h1 className="mt-1 text-lg font-semibold text-foreground">
             Audit & Governance
           </h1>
@@ -69,7 +72,8 @@ export function AuditGovernancePage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => exportAuditCsv(filterAuditLog(log, filters))}
+          disabled={entries.length === 0}
+          onClick={() => exportAuditCsv(entries)}
         >
           <DownloadIcon /> Export CSV
         </Button>

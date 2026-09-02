@@ -1,32 +1,42 @@
-import { Sparkline, MetricBar } from "@/components/metrics"
-import type { Supplier } from "@/data/suppliers"
+import { EmptyState } from "@/components/empty-state"
+import type { Supplier } from "@/store/suppliers-slice"
 
 export function OverviewTab({ supplier }: { supplier: Supplier }) {
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_260px]">
-      <div>
-        <MetricBar label="Delivery" value={supplier.breakdown.delivery} />
-        <MetricBar label="SLA" value={supplier.breakdown.sla} />
-        <MetricBar label="Quality" value={supplier.breakdown.quality} />
-        <MetricBar label="Incidents" value={supplier.breakdown.incidents} />
-        <MetricBar label="Rejected Rate" value={supplier.breakdown.rejected} />
-        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-          {supplier.insight}
-        </p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Field label="Region" value={supplier.region} />
+        <Field label="Delivery Method" value={supplier.deliveryMethod} />
+        <Field label="Owner" value={supplier.owner} />
+        <Field label="Pipeline" value={supplier.pipeline} />
+        <Field label="Frequency" value={supplier.frequency} />
+        <Field label="Volume Baseline" value={supplier.volumeBaseline.toLocaleString()} />
+        <Field label="Format" value={supplier.format} />
+        <Field label="File Size" value={supplier.fileSize} />
+        <Field label="SLA" value={supplier.sla} />
       </div>
       <div className="flex flex-col gap-3">
-        <div>
-          <p className="mb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-            90-Day Trend
-          </p>
-          <Sparkline values={supplier.trendHist} width={240} height={48} />
-        </div>
-        <Field
-          label="Normal Range"
-          value={`${supplier.normalRange[0].toLocaleString()} - ${supplier.normalRange[1].toLocaleString()}`}
-        />
-        <Field label="Schema Status" value={supplier.schemaStatus} />
-        <Field label="Agent Status" value={supplier.agentStatus} />
+        <p className="mb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+          Live Feed Stats
+        </p>
+        {supplier.liveFeedStats ? (
+          <>
+            <Field
+              label="Record Count"
+              value={supplier.liveFeedStats.recordCount.toLocaleString()}
+            />
+            <Field
+              label="Null Customer IDs"
+              value={String(supplier.liveFeedStats.nullCustomerIdCount)}
+            />
+            <Field
+              label="Last Landed"
+              value={supplier.liveFeedStats.lastLandedAt}
+            />
+          </>
+        ) : (
+          <EmptyState message="No live feed data landed yet." />
+        )}
       </div>
     </div>
   )

@@ -10,19 +10,20 @@ import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
-import type { Agent } from "@/data/agents"
+import type { Agent } from "@/store/agents-slice"
 import { useAppDispatch } from "@/store/hooks"
 import { openDrawer } from "@/store/ui-slice"
-
-const AGENT_ICON = {
-  server: ServerIcon,
-  cpu: CpuIcon,
-  eye: EyeIcon,
-}
 
 const GOV_VARIANT: Record<string, StatusChipVariant> = {
   "Human Approval Required": "medium",
   "Observe Only": "neutral",
+  "Policy-Controlled Autonomous": "ok",
+}
+
+const AGENT_ICON: Record<string, typeof ServerIcon> = {
+  "AGENT-INTAKE": ServerIcon,
+  "AGENT-ETL": CpuIcon,
+  "AGENT-DQ": EyeIcon,
 }
 
 function StatTile({
@@ -58,7 +59,7 @@ function StatTile({
 
 export function AgentWorkspaceCard({ agent }: { agent: Agent }) {
   const dispatch = useAppDispatch()
-  const Icon = AGENT_ICON[agent.icon]
+  const Icon = AGENT_ICON[agent.id] ?? EyeIcon
 
   return (
     <Card className="flex flex-col">
@@ -68,9 +69,7 @@ export function AgentWorkspaceCard({ agent }: { agent: Agent }) {
             <Icon className="size-4" />
           </span>
           <div>
-            <p className="text-[13px] font-bold text-foreground">
-              {agent.short}
-            </p>
+            <p className="text-[13px] font-bold text-foreground">{agent.name}</p>
             <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
               <span
                 className={cn(
@@ -89,28 +88,20 @@ export function AgentWorkspaceCard({ agent }: { agent: Agent }) {
           <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
             Current Task
           </p>
-          <p className="mt-0.5 text-[12px] text-foreground">{agent.task}</p>
-        </div>
-        <div>
-          <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Last Action
-          </p>
-          <p className="mt-0.5 text-[12px] text-foreground">
-            {agent.lastAction}
-          </p>
+          <p className="mt-0.5 text-[12px] text-foreground">{agent.currentTask}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <StatTile label="Actions Today" value={agent.actionsToday} />
-          <StatTile label="Success Rate" value={`${agent.successRate}%`} />
-          <StatTile label="Avg Resolution" value={agent.avgResolution} />
+          <StatTile label="Success Rate" value={`${Math.round(agent.successRate * 100)}%`} />
+          <StatTile label="Avg Resolution" value={`${agent.avgResolutionTimeMinutes} min`} />
           <StatTile
             label="Awaiting Approval"
-            value={agent.awaiting}
-            tone={agent.awaiting > 0 ? "warn" : undefined}
+            value={agent.awaitingApproval}
+            tone={agent.awaitingApproval > 0 ? "warn" : undefined}
           />
         </div>
-        <StatusChip variant={GOV_VARIANT[agent.govMode] ?? "ok"}>
-          {agent.govMode}
+        <StatusChip variant={GOV_VARIANT[agent.governanceMode] ?? "ok"}>
+          {agent.governanceMode}
         </StatusChip>
       </CardContent>
       <CardFooter>

@@ -4,7 +4,7 @@ import { CheckIcon } from "lucide-react"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { LIFECYCLE_STEPS, ROUTE_LIFECYCLE_STEP, ROUTES } from "@/constants/routes"
-import type { LifecycleFlowStep } from "@/data/command-center"
+import type { LifecycleFlowStep } from "@/store/command-center-slice"
 
 function useCurrentLifecycleStep() {
   const location = useLocation()
@@ -64,53 +64,88 @@ type LifecycleFlowDiagramProps = {
   steps: LifecycleFlowStep[]
 }
 
-const STAGE_INTERVAL_S = 0.9
-const PARTICLE_COUNT = 3
-const PARTICLE_GAP_S = 0.5
-const PARTICLE_DURATION_S = 2
+const SIZE = 100
+const CENTER = SIZE / 2
+const NODE_RADIUS = 40
+const NODE_SIZE_PCT = 18
+const ARROW_TRIM = NODE_SIZE_PCT / 2 + 1.8
+const ARROW_TRIM_DEG = (ARROW_TRIM / NODE_RADIUS) * (180 / Math.PI)
+
+function pointOnCircle(angleDeg: number, radius: number) {
+  const rad = (angleDeg * Math.PI) / 180
+  return {
+    x: CENTER + radius * Math.cos(rad),
+    y: CENTER + radius * Math.sin(rad),
+  }
+}
 
 export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
-  const cycleDuration = steps.length * STAGE_INTERVAL_S
+  const angleStep = 360 / steps.length
+  const positions = steps.map((_, index) => pointOnCircle(-90 + index * angleStep, NODE_RADIUS))
 
   return (
-    <div className="flex w-full items-stretch gap-2.5 py-1.5">
-      {steps.map((step, index) => (
-        <div
-          key={step.label}
-          className="relative min-w-0 flex-1 border border-border px-1 py-3 text-center"
-          style={{
-            animation: `stage-pulse ${cycleDuration}s ease-in-out infinite`,
-            animationDelay: `${index * STAGE_INTERVAL_S}s`,
-          }}
-        >
-          <p className="truncate text-[10.5px] font-bold text-foreground">
-            {step.count}
-          </p>
-          <p className="truncate text-[10.5px] font-semibold text-foreground">
-            {step.label}
-          </p>
-          <p className="truncate text-[9.5px] text-muted-foreground">
-            {step.unit}
-          </p>
-          {index < steps.length - 1 ? (
+    <div className="relative mx-auto aspect-square w-full max-w-[560px]">
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0 size-full" aria-hidden>
+        <defs>
+          <marker
+            id="lifecycle-arrow"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="4.5"
+            markerHeight="4.5"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--color-primary)" />
+          </marker>
+        </defs>
+        {steps.map((step, index) => {
+          const from = positions[index]!
+          const endAngle = -90 + (index + 1) * angleStep - ARROW_TRIM_DEG
+          const to = pointOnCircle(endAngle, NODE_RADIUS)
+          const d = `M ${from.x} ${from.y} A ${NODE_RADIUS} ${NODE_RADIUS} 0 0 1 ${to.x} ${to.y}`
+          return (
+            <path
+              key={`${step.stage}-connector`}
+              d={d}
+              fill="none"
+              stroke="var(--color-primary)"
+              strokeOpacity={0.7}
+              strokeWidth={0.3}
+              strokeDasharray="0.6 0.6"
+              strokeLinecap="round"
+              markerEnd="url(#lifecycle-arrow)"
+              style={{ animation: "lifecycle-flow-dash 18s linear infinite" }}
+            />
+          )
+        })}
+      </svg>
+      {steps.map((step, index) => {
+        const { x, y } = positions[index]!
+        return (
+          <div
+            key={step.stage}
+            className="absolute flex flex-col items-center justify-center rounded-full p-1.5 text-center shadow-sm"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              width: `${NODE_SIZE_PCT}%`,
+              height: `${NODE_SIZE_PCT}%`,
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "color-mix(in oklab, var(--color-primary) 10%, var(--color-card))",
+              border: "1px solid color-mix(in oklab, var(--color-primary) 25%, var(--color-border))",
+            }}
+          >
             <span
-              aria-hidden
-              className="absolute top-1/2 -right-2.5 z-10 h-2.5 w-2.5 -translate-y-1/2"
-            >
-              {Array.from({ length: PARTICLE_COUNT }).map((_, particleIndex) => (
-                <span
-                  key={particleIndex}
-                  className="absolute top-1/2 left-0 size-[3px] -translate-y-1/2 rounded-full bg-status-info"
-                  style={{
-                    animation: `flow-particle ${PARTICLE_DURATION_S}s linear infinite`,
-                    animationDelay: `${particleIndex * PARTICLE_GAP_S}s`,
-                  }}
-                />
-              ))}
-            </span>
-          ) : null}
-        </div>
-      ))}
+              className="pointer-events-none absolute inset-[4%] rounded-full border"
+              style={{ borderColor: "color-mix(in oklab, var(--color-primary) 30%, var(--color-border))" }}
+            />
+            <p className="truncate text-[13px] font-bold text-foreground">{step.count}</p>
+            <p className="truncate text-[9.5px] font-semibold text-foreground">{step.stage}</p>
+            <p className="truncate text-[7.5px] text-muted-foreground">{step.unit}</p>
+          </div>
+        )
+      })}
     </div>
   )
 }

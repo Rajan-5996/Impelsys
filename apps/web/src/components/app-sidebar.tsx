@@ -92,9 +92,9 @@ export function AppSidebar() {
       onMouseLeave={() => !isMobile && setOpen(false)}
       style={
         {
-          "--sidebar": "var(--primary)",
+          "--sidebar": "var(--standard)",
           "--sidebar-foreground": "#ffffff",
-          "--sidebar-accent": "var(--standard)",
+          "--sidebar-accent": "var(--primary)",
           "--sidebar-accent-foreground": "#ffffff",
           "--sidebar-border": "rgba(0,0,0,0.15)",
           "--sidebar-ring": "var(--standard)",
@@ -148,8 +148,8 @@ export function AppSidebar() {
                             className: "bg-primary text-white",
                           }}
                           className={cn(
-                            "gap-3 rounded-lg text-[13px] text-sidebar-foreground",
-                            isActive && "font-semibold"
+                            "gap-3 rounded-lg border border-transparent text-[13px] text-sidebar-foreground",
+                            isActive && "border-sidebar-foreground/30 font-semibold"
                           )}
                         >
                           <item.icon className="size-4" />

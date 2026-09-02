@@ -1,34 +1,24 @@
+import { useEffect } from "react"
 import { DownloadIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 
+import { EmptyState } from "@/components/empty-state"
 import { SupplierFilters } from "@/pages/suppliers/supplier-filters"
 import { getVisibleSuppliers } from "@/pages/suppliers/supplier-filtering"
 import { SupplierTable } from "@/pages/suppliers/supplier-table"
-import { SUPPLIERS } from "@/data/suppliers"
-import { useAppSelector } from "@/store/hooks"
-import { selectSupplierFilters } from "@/store/suppliers-slice"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { pushToast } from "@/store/ui-slice"
+import {
+  fetchSuppliers,
+  fetchSuppliersCsv,
+  selectSupplierFilters,
+  selectSuppliersList,
+  selectSuppliersListError,
+  selectSuppliersListStatus,
+} from "@/store/suppliers-slice"
 
-const CSV_COLUMNS: Array<[string, (row: (typeof SUPPLIERS)[number]) => string]> = [
-  ["Name", (row) => row.name],
-  ["Feed", (row) => row.feed],
-  ["Region", (row) => row.region],
-  ["Method", (row) => row.method],
-  ["Criticality", (row) => row.criticality],
-  ["Tier", (row) => row.tier],
-  ["Score", (row) => String(row.score)],
-  ["Expected Volume", (row) => String(row.avgVolume)],
-  ["Actual Volume", (row) => String(row.actual)],
-  ["Deviation", (row) => (row.deviation === null ? "" : String(row.deviation))],
-  ["Status", (row) => row.statusToday],
-]
-
-function exportSuppliersCsv(rows: typeof SUPPLIERS) {
-  const header = CSV_COLUMNS.map(([label]) => label).join(",")
-  const lines = rows.map((row) =>
-    CSV_COLUMNS.map(([, accessor]) => `"${accessor(row).replace(/"/g, '""')}"`).join(",")
-  )
-  const csv = [header, ...lines].join("\n")
+function downloadCsv(csv: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
@@ -39,8 +29,26 @@ function exportSuppliersCsv(rows: typeof SUPPLIERS) {
 }
 
 export function SupplierMonitorPage() {
+  const dispatch = useAppDispatch()
   const filters = useAppSelector(selectSupplierFilters)
-  const visibleSuppliers = getVisibleSuppliers(filters)
+  const suppliers = useAppSelector(selectSuppliersList)
+  const status = useAppSelector(selectSuppliersListStatus)
+  const error = useAppSelector(selectSuppliersListError)
+
+  useEffect(() => {
+    dispatch(fetchSuppliers())
+  }, [dispatch])
+
+  const visibleSuppliers = getVisibleSuppliers(suppliers, filters)
+
+  async function handleExport() {
+    try {
+      const csv = await dispatch(fetchSuppliersCsv()).unwrap()
+      downloadCsv(csv)
+    } catch {
+      dispatch(pushToast("Failed to export suppliers CSV", "warn"))
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -51,19 +59,23 @@ export function SupplierMonitorPage() {
             Track feed delivery, volume, and schema health across all suppliers.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => exportSuppliersCsv(visibleSuppliers)}
-        >
+        <Button variant="outline" size="sm" onClick={handleExport}>
           <DownloadIcon /> Export CSV
         </Button>
       </div>
-      <SupplierFilters
-        visibleCount={visibleSuppliers.length}
-        totalCount={SUPPLIERS.length}
-      />
-      <SupplierTable />
+      {status === "failed" ? (
+        <EmptyState message={error ?? "Failed to load suppliers."} />
+      ) : status === "loading" || status === "idle" ? (
+        <div className="h-[320px] animate-pulse rounded-md bg-muted/40" />
+      ) : (
+        <>
+          <SupplierFilters
+            visibleCount={visibleSuppliers.length}
+            totalCount={suppliers.length}
+          />
+          <SupplierTable />
+        </>
+      )}
     </div>
   )
 }

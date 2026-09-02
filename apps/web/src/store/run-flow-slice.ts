@@ -1,0 +1,147 @@
+import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit"
+
+import { axiosInstance } from "@/lib/axios-instance"
+import {
+  describeEvent,
+  isTerminalEvent,
+  normalizeStage,
+  messageForRunStatus,
+  parseSseRecord,
+  type RunFlowEvent,
+  type StageKey,
+} from "@/store/run-flow-events"
+import type { RootState } from "@/store/store"
+
+export type { RunFlowEvent, StageKey } from "@/store/run-flow-events"
+export { STAGE_ORDER } from "@/store/run-flow-events"
+
+type RunDetailResponse = {
+  run_id: string
+  status: string
+  current_stage: string
+}
+
+type RunFlowState = {
+  runId: string | null
+  currentStage: StageKey | null
+  status: string | null
+  message: string | null
+  streaming: boolean
+  error: string | null
+}
+
+const ACTIVE_RUN_KEY = "smart-etl-active-run-id"
+
+function readPersistedRunId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_RUN_KEY)
+  } catch {
+    return null
+  }
+}
+
+function persistRunId(runId: string) {
+  try {
+    localStorage.setItem(ACTIVE_RUN_KEY, runId)
+  } catch {
+    // storage unavailable (private browsing, disabled) -- non-fatal
+  }
+}
+
+const initialState: RunFlowState = {
+  runId: readPersistedRunId(),
+  currentStage: null,
+  status: null,
+  message: null,
+  streaming: false,
+  error: null,
+}
+
+export const triggerRunStream = createAsyncThunk(
+  "runFlow/triggerRunStream",
+  async (args: { onEvent?: (event: RunFlowEvent) => void } | undefined, { dispatch, rejectWithValue }) => {
+    let processedLength = 0
+    let buffer = ""
+
+    try {
+      await axiosInstance.post(
+        "/api/smart-etl/runs",
+        {},
+        {
+          timeout: 0,
+          responseType: "text",
+          onDownloadProgress: (progressEvent) => {
+            const xhr = (progressEvent.event?.target ?? null) as XMLHttpRequest | null
+            const fullText = xhr?.responseText ?? ""
+            buffer += fullText.slice(processedLength)
+            processedLength = fullText.length
+
+            const records = buffer.split("\n\n")
+            buffer = records.pop() ?? ""
+
+            for (const record of records) {
+              const parsed = parseSseRecord(record)
+              if (!parsed) continue
+              dispatch(runEventReceived(parsed))
+              args?.onEvent?.(parsed)
+            }
+          },
+        }
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to stream run."
+      dispatch(runEventReceived({ event: "error", detail: message }))
+      return rejectWithValue(message)
+    }
+  }
+)
+
+export const fetchActiveRun = createAsyncThunk("runFlow/fetchActiveRun", async (runId: string) => {
+  const response = await axiosInstance.get<RunDetailResponse>(`/api/smart-etl/runs/${runId}`)
+  return response.data
+})
+
+const runFlowSlice = createSlice({
+  name: "runFlow",
+  initialState,
+  reducers: {
+    runEventReceived: (state, action: PayloadAction<RunFlowEvent>) => {
+      const event = action.payload
+      if (event.run_id) {
+        state.runId = event.run_id
+        persistRunId(event.run_id)
+      }
+      const described = describeEvent(event)
+      if (described.stage) state.currentStage = described.stage
+      if (described.status) state.status = described.status
+      state.message = described.message
+      state.error = event.event === "error" ? described.message : null
+      state.streaming = !isTerminalEvent(event)
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(triggerRunStream.pending, (state) => {
+        state.streaming = true
+        state.error = null
+      })
+      .addCase(triggerRunStream.rejected, (state, action) => {
+        state.streaming = false
+        state.error = (action.payload as string) ?? "Failed to stream run."
+      })
+      .addCase(triggerRunStream.fulfilled, (state) => {
+        state.streaming = false
+      })
+      .addCase(fetchActiveRun.fulfilled, (state, action) => {
+        state.runId = action.payload.run_id
+        state.currentStage = normalizeStage(action.payload.current_stage)
+        state.status = action.payload.status
+        state.message = messageForRunStatus(action.payload.status)
+        persistRunId(action.payload.run_id)
+      })
+  },
+})
+
+export const { runEventReceived } = runFlowSlice.actions
+export const selectRunFlow = (state: RootState) => state.runFlow
+export const runFlowReducer = runFlowSlice.reducer

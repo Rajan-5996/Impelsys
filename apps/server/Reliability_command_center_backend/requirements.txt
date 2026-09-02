@@ -1,8 +1,0 @@
-dagster
-dagster-webserver
-duckdb
-groq
-requests
-python-dotenv
-fastapi
-uvicorn

@@ -1,19 +1,16 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 
+import type { ActivityFeedEntry } from "@/store/command-center-slice"
 import type { RootState } from "@/store/store"
 
 export type ModalDescriptor =
-  | { type: "confirm"; action: "acknowledge-northstar" | "reject-northstar" | "reject-etl" }
-  | { type: "modify-action" }
-  | { type: "compare-resolution"; similarId: string }
-  | { type: "affected-records"; ruleId: string }
-  | { type: "lineage"; ruleId: string }
-  | { type: "audit-detail"; entryId: string }
+  | { type: "affected-records"; ruleCode: string }
+  | { type: "lineage"; datasetId: string }
+  | { type: "audit-detail"; entry: ActivityFeedEntry }
   | { type: "kb-article"; articleId: string }
   | { type: "help" }
 
 export type DrawerDescriptor =
-  | { type: "stage-detail"; stageIndex: number }
   | { type: "scorecard"; supplierId: string }
   | { type: "agent-activity"; agentId: string }
 
@@ -41,7 +38,6 @@ type UiState = {
   modal: ModalDescriptor | null
   drawer: DrawerDescriptor | null
   toasts: Toast[]
-  environment: "Production" | "Pre-Production" | "QA"
   ask: {
     open: boolean
     greeted: boolean
@@ -53,7 +49,6 @@ const initialState: UiState = {
   modal: null,
   drawer: null,
   toasts: [],
-  environment: "Production",
   ask: {
     open: false,
     greeted: false,
@@ -90,12 +85,6 @@ const uiSlice = createSlice({
     dismissToast: (state, action: PayloadAction<string>) => {
       state.toasts = state.toasts.filter((toast) => toast.id !== action.payload)
     },
-    setEnvironment: (
-      state,
-      action: PayloadAction<UiState["environment"]>
-    ) => {
-      state.environment = action.payload
-    },
     openAsk: (state) => {
       state.ask.open = true
       if (!state.ask.greeted) {
@@ -103,7 +92,7 @@ const uiSlice = createSlice({
         state.ask.messages.push({
           id: "ask-greeting",
           role: "agent",
-          text: "Ask me about supplier feeds, incidents, or pipeline status.",
+          text: "Ask me about supplier feeds, pipeline status, or connectors.",
         })
       }
     },
@@ -123,7 +112,6 @@ export const {
   closeDrawer,
   pushToast,
   dismissToast,
-  setEnvironment,
   openAsk,
   closeAsk,
   sendAskMessage,
@@ -132,6 +120,5 @@ export const {
 export const selectModal = (state: RootState) => state.ui.modal
 export const selectDrawer = (state: RootState) => state.ui.drawer
 export const selectToasts = (state: RootState) => state.ui.toasts
-export const selectEnvironment = (state: RootState) => state.ui.environment
 export const selectAsk = (state: RootState) => state.ui.ask
 export const uiReducer = uiSlice.reducer

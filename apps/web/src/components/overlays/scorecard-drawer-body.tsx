@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 
 import {
@@ -6,11 +7,13 @@ import {
   SheetTitle,
 } from "@workspace/ui/components/sheet"
 
+import { EmptyState } from "@/components/empty-state"
 import { Gauge, MetricBar } from "@/components/metrics"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { supplierDetailPath } from "@/constants/routes"
-import { findSupplier, type SupplierTier } from "@/data/suppliers"
-import { useAppDispatch } from "@/store/hooks"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { fetchScorecardById, selectCurrentScorecard } from "@/store/scorecards-slice"
+import type { SupplierTier } from "@/store/suppliers-slice"
 import { closeDrawer } from "@/store/ui-slice"
 
 const TIER_VARIANT: Record<SupplierTier, StatusChipVariant> = {
@@ -21,11 +24,29 @@ const TIER_VARIANT: Record<SupplierTier, StatusChipVariant> = {
 }
 
 export function ScorecardDrawerBody({ supplierId }: { supplierId: string }) {
-  const supplier = findSupplier(supplierId)
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const { data: supplier, status, error } = useAppSelector(selectCurrentScorecard)
 
-  if (!supplier) return null
+  useEffect(() => {
+    dispatch(fetchScorecardById(supplierId))
+  }, [dispatch, supplierId])
+
+  if (status === "loading" || status === "idle") {
+    return (
+      <SheetContent>
+        <div className="h-64 animate-pulse rounded-md bg-muted/40" />
+      </SheetContent>
+    )
+  }
+
+  if (status === "failed" || !supplier) {
+    return (
+      <SheetContent>
+        <EmptyState message={error ?? "Scorecard not found."} />
+      </SheetContent>
+    )
+  }
 
   return (
     <SheetContent>
@@ -40,37 +61,17 @@ export function ScorecardDrawerBody({ supplierId }: { supplierId: string }) {
           <Gauge score={supplier.score} size={80} />
         </div>
         <div>
-          <MetricBar label="Delivery" value={supplier.breakdown.delivery} />
-          <MetricBar label="SLA" value={supplier.breakdown.sla} />
-          <MetricBar label="Quality" value={supplier.breakdown.quality} />
-          <MetricBar label="Incidents" value={supplier.breakdown.incidents} />
-          <MetricBar label="Rejected Rate" value={supplier.breakdown.rejected} />
+          <MetricBar label="Timeliness" value={supplier.breakdown.Timeliness} />
+          <MetricBar label="Volume Accuracy" value={supplier.breakdown["Volume Accuracy"]} />
+          <MetricBar label="Schema Stability" value={supplier.breakdown["Schema Stability"]} />
+          <MetricBar label="Data Quality" value={supplier.breakdown["Data Quality"]} />
+          <MetricBar label="SLA Compliance" value={supplier.breakdown["SLA Compliance"]} />
         </div>
-        {supplier.drivers ? (
-          <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
-            <DriverField label="Late Feeds" value={supplier.drivers.lateFeeds} />
-            <DriverField
-              label="Schema Issues"
-              value={supplier.drivers.schemaIssues}
-            />
-            <DriverField
-              label="Product Code Failures"
-              value={supplier.drivers.productCodeFailures}
-            />
-            <DriverField
-              label="SLA Compliance"
-              value={`${supplier.drivers.slaCompliance}%`}
-            />
-          </div>
-        ) : null}
-        <p className="border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
-          {supplier.insight}
-        </p>
         <button
           type="button"
           onClick={() => {
             dispatch(closeDrawer())
-            navigate(supplierDetailPath(supplier.id))
+            navigate(supplierDetailPath(supplier.supplierId))
           }}
           className="border border-border bg-muted/30 px-3 py-2 text-left text-[11.5px] font-semibold text-primary hover:bg-muted/50"
         >
@@ -78,24 +79,5 @@ export function ScorecardDrawerBody({ supplierId }: { supplierId: string }) {
         </button>
       </div>
     </SheetContent>
-  )
-}
-
-function DriverField({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number
-}) {
-  return (
-    <div>
-      <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-0.5 text-[12.5px] font-semibold text-foreground">
-        {value}
-      </p>
-    </div>
   )
 }

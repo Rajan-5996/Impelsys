@@ -9,22 +9,30 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 
+import { selectAuditFilters, setAuditFilter, type AuditFilters } from "@/store/audit-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { selectAuditFilters, selectAuditLog, setAuditFilter } from "@/store/audit-slice"
-import type { AuditFilterState } from "@/pages/audit/filter-audit-log"
 
-function distinctValues(values: string[]): string[] {
-  return Array.from(new Set(values)).sort()
-}
+const ACTIONS = [
+  "Detected",
+  "Approved",
+  "Rejected",
+  "Escalated",
+  "Vendor Notified",
+  "Observed",
+  "Auto-Accepted",
+]
+const AGENTS = ["ETL Resolution Agent", "Data Intake Agent", "Data Quality Agent"]
+const MODES = ["Human Approval Required", "Observe Only", "Policy-Controlled Autonomous"]
+const ENVS = ["Production", "Pre-Production", "QA"]
 
-type FilterKey = Exclude<keyof AuditFilterState, "search">
+type SelectFilterKey = Extract<keyof AuditFilters, "action" | "agent" | "mode" | "env">
 
 function FilterSelect({
   filterKey,
   label,
   options,
 }: {
-  filterKey: FilterKey
+  filterKey: SelectFilterKey
   label: string
   options: string[]
 }) {
@@ -35,7 +43,7 @@ function FilterSelect({
     <Select
       value={filters[filterKey]}
       onValueChange={(value) =>
-        dispatch(setAuditFilter({ key: filterKey, value: value as string }))
+        dispatch(setAuditFilter({ key: filterKey, value: value ?? "all" }))
       }
     >
       <SelectTrigger size="sm">
@@ -56,46 +64,24 @@ function FilterSelect({
 export function AuditFilters() {
   const dispatch = useAppDispatch()
   const filters = useAppSelector(selectAuditFilters)
-  const log = useAppSelector(selectAuditLog)
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex min-w-[220px] flex-1 items-center gap-2 border border-border bg-muted/30 px-2.5 py-1.5">
+      <div className="flex min-w-[200px] flex-1 items-center gap-2 border border-border bg-muted/30 px-2.5 py-1.5">
         <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <Input
-          value={filters.search}
+          value={filters.supplier}
           onChange={(event) =>
-            dispatch(setAuditFilter({ key: "search", value: event.target.value }))
+            dispatch(setAuditFilter({ key: "supplier", value: event.target.value }))
           }
-          placeholder="Search agent, action, supplier, incident..."
+          placeholder="Filter by supplier..."
           className="border-b-0"
         />
       </div>
-      <FilterSelect
-        filterKey="agent"
-        label="Agents"
-        options={distinctValues(log.map((entry) => entry.agent))}
-      />
-      <FilterSelect
-        filterKey="action"
-        label="Actions"
-        options={distinctValues(log.map((entry) => entry.action))}
-      />
-      <FilterSelect
-        filterKey="supplier"
-        label="Suppliers"
-        options={distinctValues(log.map((entry) => entry.supplier))}
-      />
-      <FilterSelect
-        filterKey="decision"
-        label="Decisions"
-        options={distinctValues(log.map((entry) => entry.decision))}
-      />
-      <FilterSelect
-        filterKey="mode"
-        label="Modes"
-        options={distinctValues(log.map((entry) => entry.mode))}
-      />
+      <FilterSelect filterKey="agent" label="Agents" options={AGENTS} />
+      <FilterSelect filterKey="action" label="Actions" options={ACTIONS} />
+      <FilterSelect filterKey="mode" label="Modes" options={MODES} />
+      <FilterSelect filterKey="env" label="Environments" options={ENVS} />
     </div>
   )
 }
