@@ -20,6 +20,13 @@ export type RunAuditEntry = {
   created_at: string
 }
 
+export type RunFile = {
+  kind: string
+  label: string
+  filename: string
+  size_bytes: number
+}
+
 type AsyncStatus = "idle" | "loading" | "succeeded" | "failed"
 type Fetchable<T> = { data: T; status: AsyncStatus; error: string | null }
 
@@ -28,6 +35,7 @@ type RunsState = {
   status: AsyncStatus
   error: string | null
   audit: Record<string, Fetchable<RunAuditEntry[]>>
+  files: Record<string, Fetchable<RunFile[]>>
 }
 
 const initialState: RunsState = {
@@ -35,6 +43,7 @@ const initialState: RunsState = {
   status: "idle",
   error: null,
   audit: {},
+  files: {},
 }
 
 export const fetchRuns = createAsyncThunk("runs/fetchRuns", async () => {
@@ -49,6 +58,16 @@ export const fetchRunAudit = createAsyncThunk(
       `/api/smart-etl/runs/${runId}/audit`
     )
     return { runId, entries: response.data }
+  }
+)
+
+export const fetchRunFiles = createAsyncThunk(
+  "runs/fetchRunFiles",
+  async (runId: string) => {
+    const response = await axiosInstance.get<{ run_id: string; files: RunFile[] }>(
+      `/api/smart-etl/runs/${runId}/files`
+    )
+    return { runId, files: response.data.files }
   }
 )
 
@@ -91,6 +110,27 @@ const runsSlice = createSlice({
           error: action.error.message ?? "Failed to load run audit trail",
         }
       })
+      .addCase(fetchRunFiles.pending, (state, action) => {
+        state.files[action.meta.arg] = {
+          data: state.files[action.meta.arg]?.data ?? [],
+          status: "loading",
+          error: null,
+        }
+      })
+      .addCase(fetchRunFiles.fulfilled, (state, action) => {
+        state.files[action.payload.runId] = {
+          data: action.payload.files,
+          status: "succeeded",
+          error: null,
+        }
+      })
+      .addCase(fetchRunFiles.rejected, (state, action) => {
+        state.files[action.meta.arg] = {
+          data: [],
+          status: "failed",
+          error: action.error.message ?? "Failed to load run files",
+        }
+      })
   },
 })
 
@@ -99,4 +139,6 @@ export const selectRunsStatus = (state: RootState) => state.runs.status
 export const selectRunsError = (state: RootState) => state.runs.error
 export const selectRunAudit = (runId: string) => (state: RootState) =>
   state.runs.audit[runId]
+export const selectRunFiles = (runId: string) => (state: RootState) =>
+  state.runs.files[runId]
 export const runsReducer = runsSlice.reducer

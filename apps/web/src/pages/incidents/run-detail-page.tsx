@@ -7,6 +7,7 @@ import { Input } from "@workspace/ui/components/input"
 
 import { CollapsibleCard } from "@/components/collapsible-card"
 import { EmptyState } from "@/components/empty-state"
+import { RunFilesList } from "@/components/run-files-list"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { ROUTES } from "@/constants/routes"
 import { humanizeSnake } from "@/lib/format-labels"
@@ -41,6 +42,7 @@ export function RunDetailPage() {
   const [decision, setDecision] = useState<PendingDecision | null>(null)
   const [anomaliesOpen, setAnomaliesOpen] = useState(true)
   const [retryOpen, setRetryOpen] = useState(true)
+  const [filesOpen, setFilesOpen] = useState(true)
   const [scriptFile, setScriptFile] = useState<File | null>(null)
 
   const run = runs.find((item) => item.run_id === runId)
@@ -151,6 +153,10 @@ export function RunDetailPage() {
             ))}
           </div>
         )}
+      </CollapsibleCard>
+
+      <CollapsibleCard title="Run Files" open={filesOpen} onOpenChange={setFilesOpen}>
+        <RunFilesList runId={runId} />
       </CollapsibleCard>
 
       {run?.status === "awaiting_retry" ? (

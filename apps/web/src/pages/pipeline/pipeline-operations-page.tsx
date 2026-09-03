@@ -1,9 +1,11 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Loader2Icon, ZapIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 
+import { CollapsibleCard } from "@/components/collapsible-card"
+import { RunFilesList } from "@/components/run-files-list"
 import { PipelineAuditTrail, PipelineRunFlow } from "@/pages/pipeline/pipeline-run-flow"
 import { runDetailPath } from "@/constants/routes"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
@@ -19,6 +21,7 @@ export function PipelineOperationsPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const { runId, streaming } = useAppSelector(selectRunFlow)
+  const [filesOpen, setFilesOpen] = useState(false)
 
   useEffect(() => {
     if (runId) dispatch(fetchActiveRun(runId))
@@ -73,6 +76,11 @@ export function PipelineOperationsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <div className="flex min-w-0 flex-col gap-4">
           <PipelineRunFlow />
+          {runId ? (
+            <CollapsibleCard title="Run Files" open={filesOpen} onOpenChange={setFilesOpen}>
+              <RunFilesList runId={runId} />
+            </CollapsibleCard>
+          ) : null}
         </div>
         <PipelineAuditTrail />
       </div>
