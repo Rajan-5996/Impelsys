@@ -9,6 +9,48 @@ export type DonutMetricDatum = {
   color: string
 }
 
+type PieLabelProps = {
+  cx?: number
+  cy?: number
+  midAngle?: number
+  innerRadius?: number
+  outerRadius?: number
+  percent?: number
+}
+
+const RADIAN = Math.PI / 180
+
+function InsideLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: PieLabelProps) {
+  if (
+    cx === undefined ||
+    cy === undefined ||
+    midAngle === undefined ||
+    innerRadius === undefined ||
+    outerRadius === undefined ||
+    !percent ||
+    percent < 0.08
+  ) {
+    return null
+  }
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={10.5}
+      fontWeight={600}
+    >
+      {`${Math.round(percent * 100)}%`}
+    </text>
+  )
+}
+
 export function DonutMetricChart({
   data,
   size = 132,
@@ -32,6 +74,8 @@ export function DonutMetricChart({
               paddingAngle={data.length > 1 ? 3 : 0}
               stroke="var(--color-card)"
               strokeWidth={2}
+              label={InsideLabel}
+              labelLine={false}
             >
               {data.map((row) => (
                 <Cell key={row.key} fill={row.color} />

@@ -41,23 +41,42 @@ export function PolarAreaChart({
             const startAngle = 90 - index * angleStep
             const endAngle = startAngle - angleStep
             const outerRadius = Math.max((row.value / maxValue) * maxRadius, 4)
+            const midAngle = (startAngle + endAngle) / 2
+            const labelRadius = outerRadius * 0.62
+            const labelX = cx + labelRadius * Math.cos((-midAngle * Math.PI) / 180)
+            const labelY = cy + labelRadius * Math.sin((-midAngle * Math.PI) / 180)
             return (
-              <Sector
-                key={row.key}
-                cx={cx}
-                cy={cy}
-                innerRadius={0}
-                outerRadius={outerRadius}
-                startAngle={startAngle}
-                endAngle={endAngle}
-                fill={row.color}
-                fillOpacity={hovered && hovered.key !== row.key ? 0.45 : 0.9}
-                stroke="var(--color-card)"
-                strokeWidth={2}
-                style={{ cursor: "pointer", transition: "fill-opacity 150ms" }}
-                onMouseEnter={() => setHovered(row)}
-                onMouseLeave={() => setHovered(null)}
-              />
+              <g key={row.key}>
+                <Sector
+                  cx={cx}
+                  cy={cy}
+                  innerRadius={0}
+                  outerRadius={outerRadius}
+                  startAngle={startAngle}
+                  endAngle={endAngle}
+                  fill={row.color}
+                  fillOpacity={hovered && hovered.key !== row.key ? 0.45 : 0.9}
+                  stroke="var(--color-card)"
+                  strokeWidth={2}
+                  style={{ cursor: "pointer", transition: "fill-opacity 150ms" }}
+                  onMouseEnter={() => setHovered(row)}
+                  onMouseLeave={() => setHovered(null)}
+                />
+                {row.value > 0 ? (
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    fill="white"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={10.5}
+                    fontWeight={600}
+                    pointerEvents="none"
+                  >
+                    {row.value}
+                  </text>
+                ) : null}
+              </g>
             )
           })}
         </svg>

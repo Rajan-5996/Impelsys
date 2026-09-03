@@ -2,7 +2,7 @@ import { useEffect } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
-import { BarLineComboChart } from "@/components/charts/bar-line-combo-chart"
+import { PieMetricChart } from "@/components/charts/pie-metric-chart"
 import { EmptyState } from "@/components/empty-state"
 import type { StatusChipVariant } from "@/components/status-chip"
 import { chartColorForVariant } from "@/lib/status-bar-colors"
@@ -54,7 +54,7 @@ export function SupplierPortfolioChart() {
         ) : suppliers.length === 0 ? (
           <EmptyState message="No suppliers onboarded yet." />
         ) : (
-          <BarLineComboChart data={data} />
+          <PieMetricChart data={data} />
         )}
       </CardContent>
     </Card>

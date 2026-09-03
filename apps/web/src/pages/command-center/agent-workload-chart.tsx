@@ -9,10 +9,12 @@ import { fetchAgents, selectAgents, selectAgentsError, selectAgentsStatus } from
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 
 const AGENT_SHORT_LABEL: Record<string, string> = {
-  "AGENT-INTAKE": "Data Intake",
-  "AGENT-ETL": "ETL Resolution",
+  "AGENT-INTAKE": "Source Validation",
   "AGENT-DQ": "Data Quality",
+  "AGENT-ETL": "ETL Resolution",
 }
+
+const AGENT_ORDER = ["AGENT-INTAKE", "AGENT-DQ", "AGENT-ETL"]
 
 export function AgentWorkloadChart() {
   const dispatch = useAppDispatch()
@@ -24,7 +26,11 @@ export function AgentWorkloadChart() {
     dispatch(fetchAgents())
   }, [dispatch])
 
-  const data = agents.map((agent, index) => ({
+  const orderedAgents = [...agents].sort(
+    (a, b) => AGENT_ORDER.indexOf(a.id) - AGENT_ORDER.indexOf(b.id)
+  )
+
+  const data = orderedAgents.map((agent, index) => ({
     key: agent.id,
     label: AGENT_SHORT_LABEL[agent.id] ?? agent.name,
     value: agent.actionsToday,

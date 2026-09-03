@@ -186,4 +186,5 @@ export const { runEventReceived } = runFlowSlice.actions
 export const selectRunFlow = (state: RootState) => state.runFlow
 export const selectRunQualityCheck = (runId: string) => (state: RootState) =>
   state.runFlow.qualityCheck[runId]
+export const selectRunQualityChecks = (state: RootState) => state.runFlow.qualityCheck
 export const runFlowReducer = runFlowSlice.reducer

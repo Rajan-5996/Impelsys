@@ -9,9 +9,9 @@ import { fetchAgents, selectAgents, selectAgentsError, selectAgentsStatus } from
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 
 const AGENT_SHORT_LABEL: Record<string, string> = {
-  "AGENT-INTAKE": "Data Intake",
-  "AGENT-ETL": "ETL Resolution",
+  "AGENT-INTAKE": "Source Validation",
   "AGENT-DQ": "Data Quality",
+  "AGENT-ETL": "ETL Resolution",
 }
 
 export function AgentSuccessChart() {

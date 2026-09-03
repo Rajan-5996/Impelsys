@@ -13,7 +13,6 @@ import { pipelineReducer } from "@/store/pipeline-slice"
 import { qaAgentReducer } from "@/store/qa-agent-slice"
 import { qaHistoryReducer } from "@/store/qa-history-slice"
 import { qualityDetailReducer } from "@/store/quality-detail-slice"
-import { qualityReducer } from "@/store/quality-slice"
 import { runFlowReducer } from "@/store/run-flow-slice"
 import { runsReducer } from "@/store/runs-slice"
 import { scorecardsReducer } from "@/store/scorecards-slice"
@@ -35,7 +34,6 @@ export const store = configureStore({
     githubConnector: githubConnectorReducer,
     qaAgent: qaAgentReducer,
     qaHistory: qaHistoryReducer,
-    quality: qualityReducer,
     qualityDetail: qualityDetailReducer,
     runs: runsReducer,
     runFlow: runFlowReducer,

@@ -1,8 +1,9 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 
 import { axiosInstance } from "@/lib/axios-instance"
-import type { QualityDimensionScore } from "@/store/quality-slice"
 import type { RootState } from "@/store/store"
+
+export type QualityDimensionScore = { dimension: string; score: number }
 
 export type DatasetRule = {
   ruleCode: string

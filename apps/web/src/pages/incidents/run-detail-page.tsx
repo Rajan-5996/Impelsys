@@ -160,7 +160,7 @@ export function RunDetailPage() {
       </CollapsibleCard>
 
       {run?.status === "awaiting_retry" ? (
-        <CollapsibleCard title="Retry ETL" open={retryOpen} onOpenChange={setRetryOpen}>
+        <CollapsibleCard title="Agent ETL Approval" open={retryOpen} onOpenChange={setRetryOpen}>
           <div className="flex flex-col gap-3">
             <p className="text-xs text-muted-foreground">
               Optionally upload a corrected PySpark script for this run&apos;s failing ETL
@@ -180,7 +180,7 @@ export function RunDetailPage() {
                   : "Retrying..."
                 : scriptFile
                   ? "Upload & Retry"
-                  : "Retry ETL"}
+                  : "Approve Agent"}
             </Button>
           </div>
         </CollapsibleCard>

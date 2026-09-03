@@ -5,6 +5,11 @@ import githubLogo from "@/assets/github.png"
 import jiraLogo from "@/assets/jira.png";
 import gitlab from "@/assets/gitlab.png"
 import bitbucket from "@/assets/bitbucket.png"
+import amazonS3Logo from "@/assets/s3.png"
+import azureLogo from "@/assets/azure.png"
+import gcpLogo from "@/assets/gcp.png"
+import databricksLogo from "@/assets/databricks.png"
+import snowflakeLogo from "@/assets/snowflake.png"
 
 export type ConnectorTint = "primary" | "standard" | "accent"
 
@@ -87,5 +92,70 @@ export const CONNECTORS: Connector[] = [
     lastSync: "12 minutes ago",
     logo: bitbucket,
     tint: "primary",
+  },
+  {
+    id: "amazon-s3",
+    name: "Amazon S3",
+    category: "Cloud Storage",
+    description: "Raw supplier files ingested from AWS object storage buckets.",
+    detail:
+      "Vendor drops and raw source files land in S3 buckets first, where the intake agent picks them up for validation before they enter the ETL pipeline.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: amazonS3Logo,
+    tint: "accent",
+  },
+  {
+    id: "azure-blob-storage",
+    name: "Azure Blob Storage",
+    category: "Cloud Storage",
+    description: "Raw supplier files ingested from Azure object storage containers.",
+    detail:
+      "Vendor drops and raw source files land in Blob Storage containers first, where the intake agent picks them up for validation before they enter the ETL pipeline.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: azureLogo,
+    tint: "standard",
+  },
+  {
+    id: "google-cloud-storage",
+    name: "Google Cloud Storage",
+    category: "Cloud Storage",
+    description: "Raw supplier files ingested from GCP object storage buckets.",
+    detail:
+      "Vendor drops and raw source files land in GCS buckets first, where the intake agent picks them up for validation before they enter the ETL pipeline.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: gcpLogo,
+    tint: "primary",
+  },
+  {
+    id: "databricks",
+    name: "Databricks",
+    category: "Data Platform",
+    description: "Lakehouse tables read and written by the ETL resolution agent.",
+    detail:
+      "Curated and resolved datasets are written to Databricks lakehouse tables, giving downstream consumers a single, query-ready source of truth after ETL retries succeed.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: databricksLogo,
+    tint: "accent",
+  },
+  {
+    id: "snowflake",
+    name: "Snowflake",
+    category: "Data Warehouse",
+    description: "Cleaned supplier data warehoused for reporting and analytics.",
+    detail:
+      "Once data passes quality checks, it is loaded into Snowflake so analysts and downstream BI tools can query a governed, trustworthy warehouse.",
+    status: "Not Connected",
+    owner: "Data Governance",
+    lastSync: "Never",
+    logo: snowflakeLogo,
+    tint: "standard",
   }
 ]

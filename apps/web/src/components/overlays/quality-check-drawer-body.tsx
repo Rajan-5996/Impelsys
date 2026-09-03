@@ -144,12 +144,14 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
 
         {data.issues.length > 0 ? (
           <div className="border-t border-dashed border-border pt-4">
-            <p className="mb-1.5 text-[11px] font-semibold text-foreground">Issues</p>
-            <ul className="list-disc space-y-1.5 pl-4 text-[11.5px] leading-relaxed text-muted-foreground">
-              {data.issues.map((issue, index) => (
-                <li key={index}>{issue}</li>
-              ))}
-            </ul>
+            <div className="rounded-md border border-status-critical/30 bg-status-critical/10 p-3">
+              <p className="mb-1.5 text-[11px] font-semibold text-status-critical-ink">Issues</p>
+              <ul className="list-disc space-y-1.5 pl-4 text-[11.5px] leading-relaxed text-status-critical-ink">
+                {data.issues.map((issue, index) => (
+                  <li key={index}>{issue}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         ) : null}
 

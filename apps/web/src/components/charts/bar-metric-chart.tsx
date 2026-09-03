@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ChartTooltip } from "@/components/charts/chart-tooltip"
 
@@ -31,6 +31,16 @@ export function BarMetricChart({
           content={<ChartTooltip valueFormatter={valueFormatter} />}
         />
         <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
+          <LabelList
+            dataKey="value"
+            position="insideTop"
+            formatter={(value) =>
+              valueFormatter ? valueFormatter(value as number) : `${value}`
+            }
+            fill="white"
+            fontSize={10.5}
+            fontWeight={600}
+          />
           {data.map((row) => (
             <Cell key={row.key} fill={row.color} />
           ))}
