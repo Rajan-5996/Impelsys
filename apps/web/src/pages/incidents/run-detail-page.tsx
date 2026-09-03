@@ -83,10 +83,12 @@ export function RunDetailPage() {
   }
 
   async function handleRetrySubmit() {
-    if (!runId || !scriptFile) return
+    if (!runId) return
     try {
-      await dispatch(uploadEtlScript({ runId, file: scriptFile })).unwrap()
-      dispatch(pushToast("Script uploaded -- retrying ETL.", "success"))
+      if (scriptFile) {
+        await dispatch(uploadEtlScript({ runId, file: scriptFile })).unwrap()
+        dispatch(pushToast("Script uploaded -- retrying ETL.", "success"))
+      }
       const result = await dispatch(retryEtl({ runId, actor: "operator" })).unwrap()
       setScriptFile(null)
       handleAdvance(result)
@@ -155,8 +157,9 @@ export function RunDetailPage() {
         <CollapsibleCard title="Retry ETL" open={retryOpen} onOpenChange={setRetryOpen}>
           <div className="flex flex-col gap-3">
             <p className="text-xs text-muted-foreground">
-              Upload a corrected PySpark script for this run&apos;s failing ETL stage. It is
-              analyzed automatically, then the run retries with it right away.
+              Optionally upload a corrected PySpark script for this run&apos;s failing ETL
+              stage -- it is analyzed automatically before the retry. You can also retry
+              without uploading a script.
             </p>
             <Input
               type="file"
@@ -164,8 +167,14 @@ export function RunDetailPage() {
               onChange={(event) => setScriptFile(event.target.files?.[0] ?? null)}
               disabled={etlBusy}
             />
-            <Button onClick={handleRetrySubmit} disabled={!scriptFile || etlBusy} className="w-fit">
-              {etlBusy ? (etl.status === "uploading" ? "Uploading..." : "Retrying...") : "Upload & Retry"}
+            <Button onClick={handleRetrySubmit} disabled={etlBusy} className="w-fit">
+              {etlBusy
+                ? etl.status === "uploading"
+                  ? "Uploading..."
+                  : "Retrying..."
+                : scriptFile
+                  ? "Upload & Retry"
+                  : "Retry ETL"}
             </Button>
           </div>
         </CollapsibleCard>

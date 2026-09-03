@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react"
 import { motion } from "framer-motion"
 import { AlertTriangleIcon, CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react"
 
@@ -47,16 +48,21 @@ export function StageFlow<T extends string>({
   labels,
   activeIndex,
   nodeState,
+  isNodeClickable,
+  onNodeClick,
 }: {
   stages: T[]
   labels: Record<T, string>
   activeIndex: number
   nodeState: (stage: T, index: number) => StageNodeState
+  isNodeClickable?: (stage: T, index: number) => boolean
+  onNodeClick?: (stage: T, index: number) => void
 }) {
   return (
     <div className="flex items-center">
       {stages.map((stageKey, index) => {
         const state = nodeState(stageKey, index)
+        const clickable = isNodeClickable?.(stageKey, index) ?? false
         return (
           <div key={stageKey} className="flex flex-1 items-center last:flex-none">
             <div className="flex flex-col items-center gap-1.5">
@@ -67,8 +73,19 @@ export function StageFlow<T extends string>({
                 }
                 className={cn(
                   "flex size-9 items-center justify-center rounded-full border-2",
-                  NODE_STYLE[state]
+                  NODE_STYLE[state],
+                  clickable && "cursor-pointer hover:brightness-95"
                 )}
+                {...(clickable
+                  ? {
+                      role: "button",
+                      tabIndex: 0,
+                      onClick: () => onNodeClick?.(stageKey, index),
+                      onKeyDown: (event: KeyboardEvent) => {
+                        if (event.key === "Enter" || event.key === " ") onNodeClick?.(stageKey, index)
+                      },
+                    }
+                  : {})}
               >
                 <NodeIcon state={state} />
               </motion.div>

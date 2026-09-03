@@ -4,15 +4,51 @@ import { axiosInstance } from "@/lib/axios-instance"
 import type { RootState } from "@/store/store"
 
 type AsyncStatus = "idle" | "uploading" | "retrying" | "succeeded" | "failed"
+type FetchStatus = "idle" | "loading" | "succeeded" | "failed"
+type Fetchable<T> = { data: T; status: FetchStatus; error: string | null }
+
+export type EtlStageLogEntry = {
+  stage: string
+  status: string
+  row_count: number
+}
+
+export type EtlAttempt = {
+  attempt_id: string
+  attempt_number: number
+  script_path: string
+  engine: string
+  status: string
+  stage_log: EtlStageLogEntry[]
+  error_message: string | null
+  output_row_count: number | null
+  validation: { passed: boolean; issues: string[] } | null
+  created_at: string
+}
+
+export type EtlFailureAnalysis = {
+  analysis_id: string
+  attempt_id: string
+  source: string
+  error_message: string | null
+  root_cause: string
+  corrected_script: string | null
+  confidence: string
+  created_at: string
+}
 
 type EtlState = {
   status: AsyncStatus
   error: string | null
+  attempts: Record<string, Fetchable<EtlAttempt[]>>
+  failureAnalysis: Record<string, Fetchable<EtlFailureAnalysis | null>>
 }
 
 const initialState: EtlState = {
   status: "idle",
   error: null,
+  attempts: {},
+  failureAnalysis: {},
 }
 
 function extractErrorDetail(error: unknown): string | undefined {
@@ -57,6 +93,34 @@ export const retryEtl = createAsyncThunk(
   }
 )
 
+export const fetchEtlAttempts = createAsyncThunk(
+  "etl/fetchEtlAttempts",
+  async (runId: string) => {
+    const response = await axiosInstance.get<EtlAttempt[]>(
+      `/api/smart-etl/runs/${runId}/etl/attempts`
+    )
+    return { runId, attempts: response.data }
+  }
+)
+
+export const fetchEtlFailureAnalysis = createAsyncThunk(
+  "etl/fetchEtlFailureAnalysis",
+  async (runId: string, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get<EtlFailureAnalysis>(
+        `/api/smart-etl/runs/${runId}/etl/failure-analysis`
+      )
+      return { runId, analysis: response.data }
+    } catch (error) {
+      const detail = extractErrorDetail(error)
+      return rejectWithValue({
+        runId,
+        detail: detail ?? "No failure analysis is available for this run yet.",
+      })
+    }
+  }
+)
+
 const etlSlice = createSlice({
   name: "etl",
   initialState,
@@ -82,8 +146,56 @@ const etlSlice = createSlice({
         state.status = "failed"
         state.error = (action.payload as string) ?? "Failed to trigger retry"
       })
+      .addCase(fetchEtlAttempts.pending, (state, action) => {
+        state.attempts[action.meta.arg] = {
+          data: state.attempts[action.meta.arg]?.data ?? [],
+          status: "loading",
+          error: null,
+        }
+      })
+      .addCase(fetchEtlAttempts.fulfilled, (state, action) => {
+        state.attempts[action.payload.runId] = {
+          data: action.payload.attempts,
+          status: "succeeded",
+          error: null,
+        }
+      })
+      .addCase(fetchEtlAttempts.rejected, (state, action) => {
+        state.attempts[action.meta.arg] = {
+          data: [],
+          status: "failed",
+          error: action.error.message ?? "Failed to load ETL attempts",
+        }
+      })
+      .addCase(fetchEtlFailureAnalysis.pending, (state, action) => {
+        state.failureAnalysis[action.meta.arg] = {
+          data: state.failureAnalysis[action.meta.arg]?.data ?? null,
+          status: "loading",
+          error: null,
+        }
+      })
+      .addCase(fetchEtlFailureAnalysis.fulfilled, (state, action) => {
+        state.failureAnalysis[action.payload.runId] = {
+          data: action.payload.analysis,
+          status: "succeeded",
+          error: null,
+        }
+      })
+      .addCase(fetchEtlFailureAnalysis.rejected, (state, action) => {
+        const payload = action.payload as { runId: string; detail: string } | undefined
+        const runId = payload?.runId ?? action.meta.arg
+        state.failureAnalysis[runId] = {
+          data: null,
+          status: "failed",
+          error: payload?.detail ?? "Failed to load failure analysis",
+        }
+      })
   },
 })
 
 export const selectEtl = (state: RootState) => state.etl
+export const selectEtlAttempts = (runId: string) => (state: RootState) =>
+  state.etl.attempts[runId]
+export const selectEtlFailureAnalysis = (runId: string) => (state: RootState) =>
+  state.etl.failureAnalysis[runId]
 export const etlReducer = etlSlice.reducer

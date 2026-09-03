@@ -4,8 +4,7 @@ import { Loader2Icon, ZapIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 
-import { PipelineAuditTrail } from "@/pages/pipeline/pipeline-audit-trail"
-import { PipelineRunFlow } from "@/pages/pipeline/pipeline-run-flow"
+import { PipelineAuditTrail, PipelineRunFlow } from "@/pages/pipeline/pipeline-run-flow"
 import { runDetailPath } from "@/constants/routes"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {

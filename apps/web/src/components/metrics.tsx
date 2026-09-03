@@ -136,8 +136,8 @@ export function MetricBar({ label, value, max = 100 }: MetricBarProps) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100))
 
   return (
-    <div className="mb-1.5 flex items-center gap-2">
-      <span className="w-32 shrink-0 truncate text-[11px] text-muted-foreground">
+    <div className="mb-3 flex items-center gap-3">
+      <span className="w-40 shrink-0 truncate text-[11px] text-muted-foreground">
         {label}
       </span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-none bg-muted">

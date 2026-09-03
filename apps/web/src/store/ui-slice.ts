@@ -13,6 +13,8 @@ export type ModalDescriptor =
 export type DrawerDescriptor =
   | { type: "scorecard"; supplierId: string }
   | { type: "agent-activity"; agentId: string }
+  | { type: "etl-failure-analysis"; runId: string }
+  | { type: "quality-check"; runId: string }
 
 export type ToastVariant = "success" | "info" | "warn"
 
