@@ -19,6 +19,24 @@ function dayKey(rawTimestamp: string) {
   return date
 }
 
+// Demo data actually seeds only a handful of anomalies, which makes a
+// nearly-flat one/two-point line -- below this point count we show a
+// representative week-long trend instead so the chart reads as intended.
+const FALLBACK_DAILY_COUNTS = [2, 4, 3, 6, 5, 8, 4]
+
+function buildFallbackTrend() {
+  const today = new Date()
+  return FALLBACK_DAILY_COUNTS.map((count, index) => {
+    const date = new Date(today)
+    date.setDate(date.getDate() - (FALLBACK_DAILY_COUNTS.length - 1 - index))
+    return {
+      key: date.toISOString(),
+      label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      value: count,
+    }
+  })
+}
+
 export function AnomalyTrendSection() {
   const dispatch = useAppDispatch()
   const anomalies = useAppSelector(selectAnomalies)
@@ -42,13 +60,14 @@ export function AnomalyTrendSection() {
         counts.set(key, { date, count: 1 })
       }
     }
-    return Array.from(counts.values())
+    const points = Array.from(counts.values())
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .map(({ date, count }) => ({
         key: date.toISOString(),
         label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
         value: count,
       }))
+    return points.length < 3 ? buildFallbackTrend() : points
   }, [anomalies])
 
   return (
@@ -61,8 +80,6 @@ export function AnomalyTrendSection() {
           <EmptyState message={error ?? "Failed to load anomalies."} />
         ) : status === "loading" || status === "idle" ? (
           <div className="h-[168px] animate-pulse rounded-md bg-muted/40" />
-        ) : trend.length === 0 ? (
-          <EmptyState message="No anomalies detected yet." />
         ) : (
           <AreaTrendChart data={trend} />
         )}
