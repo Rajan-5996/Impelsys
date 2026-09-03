@@ -65,7 +65,7 @@ function CodeBlock({ label, code }: { label: string; code: string }) {
   )
 }
 
-export function EtlFailureAnalysisDrawerBody({ runId }: { runId: string }) {
+export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
   const dispatch = useAppDispatch()
   const analysis = useAppSelector(selectEtlFailureAnalysis(runId))
   const attempts = useAppSelector(selectEtlAttempts(runId))
@@ -77,125 +77,114 @@ export function EtlFailureAnalysisDrawerBody({ runId }: { runId: string }) {
 
   if (!analysis || analysis.status === "loading" || analysis.status === "idle") {
     return (
-      <SheetContent className="data-[side=right]:sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle>ETL Failure Analysis</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col gap-3 px-8 pb-16">
-          <div className="h-24 animate-pulse rounded-md bg-muted/40" />
-          <div className="h-40 animate-pulse rounded-md bg-muted/40" />
-          <div className="h-40 animate-pulse rounded-md bg-muted/40" />
-        </div>
-      </SheetContent>
+      <div className="flex flex-col gap-3">
+        <div className="h-24 animate-pulse rounded-md bg-muted/40" />
+        <div className="h-40 animate-pulse rounded-md bg-muted/40" />
+        <div className="h-40 animate-pulse rounded-md bg-muted/40" />
+      </div>
     )
   }
 
   if (analysis.status === "failed" || !analysis.data) {
-    return (
-      <SheetContent className="data-[side=right]:sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle>ETL Failure Analysis</SheetTitle>
-        </SheetHeader>
-        <div className="px-8 pb-16">
-          <EmptyState message={analysis.error ?? "No failure analysis available for this run."} />
-        </div>
-      </SheetContent>
-    )
+    return <EmptyState message={analysis.error ?? "No failure analysis available for this run."} />
   }
 
   const data = analysis.data
   const attempt = attempts?.data.find((item) => item.attempt_id === data.attempt_id)
 
   return (
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11.5px] font-semibold text-foreground">{runId}</span>
+        <StatusChip variant={CONFIDENCE_VARIANT[data.confidence] ?? "medium"}>
+          {humanizeSnake(data.confidence)} confidence
+        </StatusChip>
+        <span className="text-[10.5px] text-muted-foreground">
+          {humanizeSnake(data.source)} &middot; {formatTimestamp(data.created_at)}
+        </span>
+      </div>
+
+      {attempt ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-dashed border-border pb-3">
+          <StatusChip variant="neutral">Attempt #{attempt.attempt_number}</StatusChip>
+          <StatusChip variant="neutral">{humanizeSnake(attempt.engine)}</StatusChip>
+          {attempt.stage_log.map((entry, index) => (
+            <StatusChip
+              key={`${entry.stage}-${index}`}
+              variant={STAGE_STATUS_VARIANT[entry.status] ?? "critical"}
+            >
+              {humanizeSnake(entry.stage)} ({entry.row_count})
+            </StatusChip>
+          ))}
+        </div>
+      ) : null}
+
+      {attempt?.validation && !attempt.validation.passed ? (
+        <div>
+          <p className="text-[11px] font-semibold text-foreground">Validation Issues</p>
+          <ul className="mt-1 list-disc pl-4 text-[11.5px] text-muted-foreground">
+            {attempt.validation.issues.map((issue, index) => (
+              <li key={index}>{issue}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="flex items-start gap-2 border border-status-warning/40 bg-status-warning/15 p-3">
+        <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-status-warning-foreground" />
+        <div>
+          <p className="text-[11px] font-semibold text-status-warning-foreground">Root Cause</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-status-warning-foreground">
+            {data.root_cause}
+          </p>
+        </div>
+      </div>
+
+      {data.error_message ? (
+        <CodeBlock label="Error / Traceback" code={data.error_message} />
+      ) : null}
+
+      {data.corrected_script ? (
+        <CodeBlock label="Corrected Script" code={data.corrected_script} />
+      ) : null}
+
+      {attempts?.data && attempts.data.length > 1 ? (
+        <div className="border-t border-dashed border-border pt-3">
+          <p className="text-[11px] font-semibold text-foreground">
+            All Attempts for This Run
+          </p>
+          <div className="mt-2 flex flex-col gap-1.5">
+            {attempts.data.map((item) => (
+              <div
+                key={item.attempt_id}
+                className="flex items-center justify-between gap-2 border border-border px-2.5 py-1.5"
+              >
+                <span className="text-[11px] font-medium text-foreground">
+                  Attempt #{item.attempt_number}
+                </span>
+                <span className="text-[10.5px] text-muted-foreground">
+                  {formatTimestamp(item.created_at)}
+                </span>
+                <StatusChip variant={ATTEMPT_STATUS_VARIANT[item.status] ?? "neutral"}>
+                  {humanizeSnake(item.status)}
+                </StatusChip>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export function EtlFailureAnalysisDrawerBody({ runId }: { runId: string }) {
+  return (
     <SheetContent className="data-[side=right]:sm:max-w-2xl">
       <SheetHeader>
         <SheetTitle>ETL Failure Analysis</SheetTitle>
       </SheetHeader>
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-8 pb-16">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11.5px] font-semibold text-foreground">{runId}</span>
-          <StatusChip variant={CONFIDENCE_VARIANT[data.confidence] ?? "medium"}>
-            {humanizeSnake(data.confidence)} confidence
-          </StatusChip>
-          <span className="text-[10.5px] text-muted-foreground">
-            {humanizeSnake(data.source)} &middot; {formatTimestamp(data.created_at)}
-          </span>
-        </div>
-
-        {attempt ? (
-          <div className="flex flex-wrap items-center gap-2 border-b border-dashed border-border pb-3">
-            <StatusChip variant="neutral">Attempt #{attempt.attempt_number}</StatusChip>
-            <StatusChip variant="neutral">{humanizeSnake(attempt.engine)}</StatusChip>
-            {attempt.stage_log.map((entry, index) => (
-              <StatusChip
-                key={`${entry.stage}-${index}`}
-                variant={STAGE_STATUS_VARIANT[entry.status] ?? "critical"}
-              >
-                {humanizeSnake(entry.stage)} ({entry.row_count})
-              </StatusChip>
-            ))}
-          </div>
-        ) : null}
-
-        {attempt?.validation && !attempt.validation.passed ? (
-          <div>
-            <p className="text-[11px] font-semibold text-foreground">Validation Issues</p>
-            <ul className="mt-1 list-disc pl-4 text-[11.5px] text-muted-foreground">
-              {attempt.validation.issues.map((issue, index) => (
-                <li key={index}>{issue}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        <div className="flex items-start gap-2 border border-status-warning/40 bg-status-warning/15 p-3">
-          <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-status-warning-foreground" />
-          <div>
-            <p className="text-[11px] font-semibold text-status-warning-foreground">Root Cause</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-status-warning-foreground">
-              {data.root_cause}
-            </p>
-          </div>
-        </div>
-
-        {data.error_message ? (
-          <CodeBlock label="Error / Traceback" code={data.error_message} />
-        ) : null}
-
-        {data.corrected_script ? (
-          <CodeBlock label="Corrected Script" code={data.corrected_script} />
-        ) : null}
-
-        <div
-          className="border-t border-dashed border-border pt-3 pb-[15px]"
-          aria-hidden="true"
-        />
-
-        {attempts?.data && attempts.data.length > 1 ? (
-          <div className="border-t border-dashed border-border pt-3">
-            <p className="text-[11px] font-semibold text-foreground">
-              All Attempts for This Run
-            </p>
-            <div className="mt-2 flex flex-col gap-1.5">
-              {attempts.data.map((item) => (
-                <div
-                  key={item.attempt_id}
-                  className="flex items-center justify-between gap-2 border border-border px-2.5 py-1.5"
-                >
-                  <span className="text-[11px] font-medium text-foreground">
-                    Attempt #{item.attempt_number}
-                  </span>
-                  <span className="text-[10.5px] text-muted-foreground">
-                    {formatTimestamp(item.created_at)}
-                  </span>
-                  <StatusChip variant={ATTEMPT_STATUS_VARIANT[item.status] ?? "neutral"}>
-                    {humanizeSnake(item.status)}
-                  </StatusChip>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <EtlFailureAnalysisContent runId={runId} />
       </div>
     </SheetContent>
   )

@@ -7,6 +7,7 @@ import { Input } from "@workspace/ui/components/input"
 
 import { CollapsibleCard } from "@/components/collapsible-card"
 import { EmptyState } from "@/components/empty-state"
+import { EtlFailureAnalysisContent } from "@/components/overlays/etl-failure-analysis-drawer-body"
 import { RunFilesList } from "@/components/run-files-list"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { ROUTES } from "@/constants/routes"
@@ -161,8 +162,17 @@ export function RunDetailPage() {
 
       {run?.status === "awaiting_retry" ? (
         <CollapsibleCard title="Agent ETL Approval" open={retryOpen} onOpenChange={setRetryOpen}>
-          <div className="flex flex-col gap-3">
-            <p className="text-xs text-muted-foreground">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-foreground">
+                What the Agent Is Planning to Change
+              </p>
+              <div className="mt-2">
+                <EtlFailureAnalysisContent runId={runId} />
+              </div>
+            </div>
+
+            <p className="border-t border-dashed border-border pt-3 text-xs text-muted-foreground">
               Optionally upload a corrected PySpark script for this run&apos;s failing ETL
               stage -- it is analyzed automatically before the retry. You can also retry
               without uploading a script.
