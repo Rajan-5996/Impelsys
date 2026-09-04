@@ -26,6 +26,14 @@ export const AGENT_CHART_COLORS = [
   "var(--color-accent)",
 ]
 
+export const BRAND_CHART_COLORS = [
+  "var(--color-primary)",
+  "var(--color-accent)",
+  "var(--color-standard)",
+  "var(--color-chart-brand-4)",
+  "var(--color-chart-brand-5)",
+]
+
 export const CATEGORICAL_CHART_COLORS = [
   "var(--color-primary)",
   "var(--color-standard)",

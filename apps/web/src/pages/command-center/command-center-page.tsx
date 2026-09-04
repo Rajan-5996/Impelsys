@@ -1,6 +1,5 @@
 import { AgentActionsChart } from "@/pages/command-center/agent-actions-chart"
 import { AgentSuccessChart } from "@/pages/command-center/agent-success-chart"
-import { AgentWorkloadChart } from "@/pages/command-center/agent-workload-chart"
 import { AnomaliesOverviewSection } from "@/pages/command-center/anomalies-overview-section"
 import { AnomalyTrendSection } from "@/pages/command-center/anomaly-trend-section"
 import { KpiSection } from "@/pages/command-center/kpi-section"
@@ -14,8 +13,8 @@ export function CommandCenterPage() {
       <KpiSection />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <AgentActionsChart />
+        <LifecycleSection />
         <AgentSuccessChart />
-        <AgentWorkloadChart />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SupplierPortfolioChart />
@@ -23,7 +22,6 @@ export function CommandCenterPage() {
       </div>
       <AnomaliesOverviewSection />
       <AnomalyTrendSection />
-      <LifecycleSection />
     </div>
   )
 }

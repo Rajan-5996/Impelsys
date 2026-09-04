@@ -33,7 +33,7 @@ export function PipelineRunsChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pipeline Run Status</CardTitle>
+        <CardTitle>Agent Run Status</CardTitle>
       </CardHeader>
       <CardContent>
         {status === "failed" ? (
@@ -43,7 +43,7 @@ export function PipelineRunsChart() {
         ) : runs.length === 0 ? (
           <EmptyState message="No pipeline runs recorded yet." />
         ) : (
-          <AreaTrendChart data={data} color="var(--color-standard)" />
+          <AreaTrendChart data={data} color="var(--color-standard)" seriesName="Runs" />
         )}
       </CardContent>
     </Card>

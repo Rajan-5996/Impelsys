@@ -26,6 +26,8 @@
     --accent-foreground: #1F1F1F;
     --warning: #1F1F1F;
     --warning-foreground: #E2E8F0;
+    --chart-brand-4: #8F4BC0;
+    --chart-brand-5: #A980B9;
     --status-critical: #d03b3b;
     --status-critical-foreground: #ffffff;
     --status-critical-ink: #d03b3b;
@@ -35,7 +37,7 @@
     --status-warning-foreground: #402a00;
     --status-good: #0ca30c;
     --status-good-foreground: #ffffff;
-    --status-good-ink: #006300;
+    --status-good-ink: #0ca30c;
     --status-info: #2a78d6;
     --status-info-foreground: #ffffff;
     --muted: oklch(0.96 0.002 17.2);
@@ -77,6 +79,8 @@
     --accent-foreground: #1F1F1F;
     --warning: #1F1F1F;
     --warning-foreground: #E2E8F0;
+    --chart-brand-4: #8F4BC0;
+    --chart-brand-5: #A980B9;
     --status-critical: #d03b3b;
     --status-critical-foreground: #ffffff;
     --status-critical-ink: #e66767;
@@ -127,6 +131,8 @@
     --color-accent-foreground: var(--accent-foreground);
     --color-standard: var(--standard);
     --color-standard-foreground: var(--standard-foreground);
+    --color-chart-brand-4: var(--chart-brand-4);
+    --color-chart-brand-5: var(--chart-brand-5);
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
     --color-status-critical: var(--status-critical);

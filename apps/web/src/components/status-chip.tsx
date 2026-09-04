@@ -53,3 +53,29 @@ export function StatusChip({ variant, children, className }: StatusChipProps) {
     </Badge>
   )
 }
+
+const TEXT_VARIANT_MAP: Record<StatusChipVariant, string> = {
+  critical: "text-status-critical-ink",
+  high: "text-status-serious",
+  medium: "text-status-warning",
+  low: "text-status-info",
+  ok: "text-status-good-ink",
+  passed: "text-status-good-ink",
+  warning: "text-status-warning-foreground",
+  failed: "text-status-critical-ink",
+  neutral: "text-muted-foreground",
+  preferred: "text-status-good-ink",
+  approved: "text-status-info",
+  monitor: "text-status-warning-foreground",
+  atrisk: "text-status-critical-ink",
+}
+
+/** Same status color-coding as StatusChip, but as plain colored text with no
+ * pill background -- for places a solid badge reads as too heavy. */
+export function StatusText({ variant, children, className }: StatusChipProps) {
+  return (
+    <span className={cn("text-[11.5px] font-bold tracking-wide", TEXT_VARIANT_MAP[variant], className)}>
+      {children}
+    </span>
+  )
+}

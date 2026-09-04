@@ -73,7 +73,7 @@ export function AnomalyTrendSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Anomalies Detected Over Time</CardTitle>
+        <CardTitle>AI Anomaly Detection Trend</CardTitle>
       </CardHeader>
       <CardContent>
         {status === "failed" ? (
@@ -81,7 +81,7 @@ export function AnomalyTrendSection() {
         ) : status === "loading" || status === "idle" ? (
           <div className="h-[168px] animate-pulse rounded-md bg-muted/40" />
         ) : (
-          <AreaTrendChart data={trend} />
+          <AreaTrendChart data={trend} seriesName="Anomalies" />
         )}
       </CardContent>
     </Card>

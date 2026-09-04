@@ -57,7 +57,7 @@ export function ToastStack() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed right-5 bottom-5 z-[300] flex flex-col items-end gap-2">
+    <div className="fixed top-20 right-5 z-[300] flex flex-col items-end gap-2">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} />
       ))}

@@ -10,6 +10,7 @@ import azureLogo from "@/assets/azure.png"
 import gcpLogo from "@/assets/gcp.png"
 import databricksLogo from "@/assets/databricks.png"
 import snowflakeLogo from "@/assets/snowflake.png"
+import dbtLogo from "@/assets/DBT.png"
 
 export type ConnectorTint = "primary" | "standard" | "accent"
 
@@ -157,5 +158,18 @@ export const CONNECTORS: Connector[] = [
     lastSync: "Never",
     logo: snowflakeLogo,
     tint: "standard",
-  }
+  },
+  {
+    id: "dbt",
+    name: "dbt",
+    category: "Data Transformation",
+    description: "Transformation models and tests version-controlled for the ETL pipeline.",
+    detail:
+      "dbt models define how curated tables are built and tested downstream of ingestion, giving the ETL resolution agent a documented, version-controlled transformation layer to reason about when a run fails.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: dbtLogo,
+    tint: "accent",
+  },
 ]

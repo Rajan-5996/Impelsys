@@ -21,7 +21,7 @@ const STATUS_VARIANT: Record<string, StatusChipVariant> = {
 export function QaHistoryPanel() {
   const dispatch = useAppDispatch()
   const history = useAppSelector(selectQaHistoryList)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const detail = useAppSelector(selectQaHistoryDetail(expandedId ?? ""))
 

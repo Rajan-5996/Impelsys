@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 
 import { PieMetricChart } from "@/components/charts/pie-metric-chart"
 import { EmptyState } from "@/components/empty-state"
-import type { StatusChipVariant } from "@/components/status-chip"
-import { chartColorForVariant } from "@/lib/status-bar-colors"
+import { BRAND_CHART_COLORS } from "@/lib/status-bar-colors"
 import {
   fetchSuppliers,
   selectSuppliersList,
@@ -14,13 +13,6 @@ import {
   type SupplierTier,
 } from "@/store/suppliers-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-
-const TIER_VARIANT: Record<SupplierTier, StatusChipVariant> = {
-  Preferred: "preferred",
-  Approved: "approved",
-  Monitor: "monitor",
-  "At Risk": "atrisk",
-}
 
 const TIER_ORDER: SupplierTier[] = ["Preferred", "Approved", "Monitor", "At Risk"]
 
@@ -34,17 +26,17 @@ export function SupplierPortfolioChart() {
     dispatch(fetchSuppliers())
   }, [dispatch])
 
-  const data = TIER_ORDER.map((tier) => ({
+  const data = TIER_ORDER.map((tier, index) => ({
     key: tier,
     label: tier,
     value: suppliers.filter((supplier) => supplier.tier === tier).length,
-    color: chartColorForVariant(TIER_VARIANT[tier]),
+    color: BRAND_CHART_COLORS[index % BRAND_CHART_COLORS.length]!,
   }))
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Supplier Portfolio</CardTitle>
+        <CardTitle>AI-Scored Supplier Tiers</CardTitle>
       </CardHeader>
       <CardContent>
         {status === "failed" ? (

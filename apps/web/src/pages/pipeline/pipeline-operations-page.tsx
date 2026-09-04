@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect } from "react"
 import { Loader2Icon, ZapIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
-import { CollapsibleCard } from "@/components/collapsible-card"
 import { RunFilesList } from "@/components/run-files-list"
+import { PipelineActionItems } from "@/pages/pipeline/pipeline-action-items"
 import { PipelineAuditTrail, PipelineRunFlow } from "@/pages/pipeline/pipeline-run-flow"
-import { runDetailPath } from "@/constants/routes"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
   fetchActiveRun,
@@ -17,28 +16,41 @@ import {
 } from "@/store/run-flow-slice"
 import { pushToast } from "@/store/ui-slice"
 
+const TERMINAL_STATUSES = new Set([
+  "completed",
+  "halted",
+  "etl_validation_failed",
+  "failed_max_retries",
+])
+
 export function PipelineOperationsPage() {
   const dispatch = useAppDispatch()
-  const navigate = useNavigate()
-  const { runId, streaming } = useAppSelector(selectRunFlow)
-  const [filesOpen, setFilesOpen] = useState(false)
+  const { runId, status, message, streaming } = useAppSelector(selectRunFlow)
 
   useEffect(() => {
     if (runId) dispatch(fetchActiveRun(runId))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch])
 
+  // The SSE stream only covers one leg of the run and closes once it pauses --
+  // any further progress the backend makes after a human decision (e.g. moving
+  // from anomaly approval straight to an ETL failure) happens with no live
+  // connection open, so poll the run's own state while it isn't actively
+  // streaming to pick that up instead of requiring a manual page reload.
+  useEffect(() => {
+    if (!runId || streaming || (status && TERMINAL_STATUSES.has(status))) return
+    const interval = setInterval(() => dispatch(fetchActiveRun(runId)), 2500)
+    return () => clearInterval(interval)
+  }, [dispatch, runId, streaming, status])
+
   async function handleTriggerAgent() {
     function onEvent(event: RunFlowEvent) {
       if (event.event !== "paused" || !event.run_id) return
-      const runId = event.run_id
 
       if (event.status === "awaiting_anomaly_approval") {
         dispatch(pushToast("Anomaly needs your approval.", "warn"))
-        setTimeout(() => navigate(runDetailPath(runId)), 1500)
       } else if (event.status === "awaiting_retry") {
         dispatch(pushToast("ETL failed -- retry needs your review.", "warn"))
-        setTimeout(() => navigate(runDetailPath(runId)), 1500)
       }
     }
 
@@ -77,13 +89,19 @@ export function PipelineOperationsPage() {
         <div className="flex min-w-0 flex-col gap-4">
           <PipelineRunFlow />
           {runId ? (
-            <CollapsibleCard title="Run Files" open={filesOpen} onOpenChange={setFilesOpen}>
-              <RunFilesList runId={runId} />
-            </CollapsibleCard>
+            <Card>
+              <CardHeader>
+                <CardTitle>Run Files</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RunFilesList runId={runId} />
+              </CardContent>
+            </Card>
           ) : null}
         </div>
         <PipelineAuditTrail />
       </div>
+      <PipelineActionItems runId={runId} runStatus={status} runMessage={message} />
     </div>
   )
 }

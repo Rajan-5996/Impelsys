@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 import { AnomalyBreakdown } from "@/components/anomaly-breakdown"
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
-import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
+import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { ROUTES, runDetailPath } from "@/constants/routes"
 import { ANOMALY_TYPE_LABEL } from "@/lib/anomaly-labels"
 import { formatDetailEntries, formatTimestamp } from "@/lib/format-labels"
@@ -47,9 +47,9 @@ const COLUMNS: DataTableColumn<Anomaly>[] = [
     key: "status",
     header: "Status",
     render: (row) => (
-      <StatusChip variant={STATUS_VARIANT[row.status] ?? "medium"}>
+      <StatusText variant={STATUS_VARIANT[row.status] ?? "medium"}>
         {row.status}
-      </StatusChip>
+      </StatusText>
     ),
   },
   { key: "decided_by", header: "Decided By", render: (row) => row.decided_by ?? "—" },
@@ -97,8 +97,6 @@ export function IncidentsPage() {
         <div className="h-64 animate-pulse rounded-md bg-muted/40" />
       ) : (
         <>
-          <RunsTable />
-
           <Card>
             <CardHeader>
               <CardTitle>Anomaly Overview</CardTitle>
@@ -107,6 +105,8 @@ export function IncidentsPage() {
               <AnomalyBreakdown anomalies={anomalies} />
             </CardContent>
           </Card>
+
+          <RunsTable />
 
           <Card>
             <CardHeader>

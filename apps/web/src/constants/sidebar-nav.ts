@@ -1,15 +1,15 @@
 import {
   Archive,
   Briefcase,
+  ChartPie,
   FileText,
   GitBranch,
+  Layers,
   LayoutGrid,
   PlugZap,
-  Radar,
   Settings,
   ShieldCheck,
   Siren,
-  Star,
 } from "lucide-react"
 
 import { ROUTES } from "@/constants/routes"
@@ -31,7 +31,6 @@ export const navGroups: NavGroup[] = [
     label: "Operate",
     items: [
       { title: "Dashboard", path: ROUTES.commandCenter, icon: LayoutGrid },
-      { title: "Supplier Monitor", path: ROUTES.suppliers, icon: Radar },
       { title: "Pipeline Operations", path: ROUTES.pipeline, icon: GitBranch },
       { title: "Connectors", path: ROUTES.connectors, icon: PlugZap },
       { title: "Data Quality", path: ROUTES.quality, icon: ShieldCheck },
@@ -40,9 +39,11 @@ export const navGroups: NavGroup[] = [
   {
     label: "Insight",
     items: [
-      { title: "Supplier Scorecards", path: ROUTES.scorecards, icon: Star },
+      // { title: "Supplier Scorecards", path: ROUTES.scorecards, icon: Star },
       { title: "Incidents", path: ROUTES.incidents, icon: Siren },
       { title: "Agent Workspace", path: ROUTES.agents, icon: Briefcase },
+      { title: "Data Analyst Agent", path: ROUTES.dataAnalystAgent, icon: ChartPie },
+      { title: "Metadata Lakehouse", path: ROUTES.metadataLakehouse, icon: Layers },
     ],
   },
   {

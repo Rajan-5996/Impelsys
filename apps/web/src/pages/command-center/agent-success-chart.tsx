@@ -32,11 +32,11 @@ export function AgentSuccessChart() {
   }))
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Agent Success Rate</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         {status === "failed" ? (
           <EmptyState message={error ?? "Failed to load agents."} />
         ) : status === "loading" || status === "idle" ? (
@@ -44,7 +44,18 @@ export function AgentSuccessChart() {
         ) : agents.length === 0 ? (
           <EmptyState message="No agents active right now." />
         ) : (
-          <BarMetricChart data={data} valueFormatter={(value) => `${value}%`} />
+          <div className="flex flex-1 flex-col justify-center gap-3">
+            <BarMetricChart data={data} valueFormatter={(value) => `${value}%`} />
+            <div className="flex flex-col gap-1.5 border-t border-dashed border-border pt-3">
+              {data.map((row) => (
+                <div key={row.key} className="flex items-center gap-1.5 text-[11px]">
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: row.color }} />
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">{row.label}</span>
+                  <span className="shrink-0 font-semibold text-foreground">{row.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -18,18 +18,18 @@ export function ChartTooltip({
   if (!active || !payload || payload.length === 0) return null
 
   return (
-    <div className="rounded-md border border-border bg-popover px-2.5 py-1.5 text-[11px] shadow-md">
-      {label ? <p className="mb-1 font-semibold text-foreground">{label}</p> : null}
+    <div className="animate-in fade-in zoom-in-95 rounded-lg border border-primary/40 bg-primary px-2.5 py-1.5 text-[11px] shadow-lg duration-150">
+      {label ? <p className="mb-1 font-semibold text-primary-foreground">{label}</p> : null}
       <div className="flex flex-col gap-0.5">
         {payload.map((entry, index) => (
-          <p key={index} className="flex items-center gap-1.5 text-muted-foreground">
+          <p key={index} className="flex items-center gap-1.5 text-primary-foreground/80">
             {entry.color ? (
               <span
                 className="inline-block size-2 rounded-full"
                 style={{ background: entry.color }}
               />
             ) : null}
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold text-primary-foreground">
               {entry.value !== undefined
                 ? valueFormatter
                   ? valueFormatter(entry.value)

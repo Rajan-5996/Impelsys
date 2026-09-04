@@ -46,6 +46,59 @@ const ICON_BOX: Record<AccentKey, string> = {
   info: "border-primary/30 bg-primary/15",
 }
 
+const GLOW: Record<AccentKey, string> = {
+  up: "hover:shadow-status-good/20",
+  down: "hover:shadow-status-critical/20",
+  flat: "hover:shadow-accent/20",
+  info: "hover:shadow-primary/20",
+}
+
+const SPARK_COLOR: Record<AccentKey, string> = {
+  up: "var(--color-status-good)",
+  down: "var(--color-status-critical)",
+  flat: "var(--color-standard)",
+  info: "var(--color-primary)",
+}
+
+function seededSparkline(seed: string, dir: "up" | "down" | "flat") {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  const rand = () => {
+    h = (h * 1103515245 + 12345) >>> 0
+    return (h % 1000) / 1000
+  }
+  const phase = rand() * Math.PI * 2
+  const waveFreq = 0.8 + rand() * 0.5
+  const slope = dir === "up" ? 0.05 : dir === "down" ? -0.05 : 0
+  const points: number[] = []
+  for (let i = 0; i < 9; i++) {
+    const wave = Math.sin(phase + i * waveFreq) * 0.24
+    const noise = (rand() - 0.5) * 0.1
+    let value = 0.5 + slope * (i - 4) + wave + noise
+    value = Math.max(0.08, Math.min(0.92, value))
+    points.push(value)
+  }
+  return points
+}
+
+function Sparkline({ seed, dir, color }: { seed: string; dir: "up" | "down" | "flat"; color: string }) {
+  const points = seededSparkline(seed, dir)
+  const width = 100
+  const height = 26
+  const stepX = width / (points.length - 1)
+  const linePath = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${(i * stepX).toFixed(1)} ${(height - p * height).toFixed(1)}`)
+    .join(" ")
+  const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-6 w-full">
+      <path d={areaPath} fill={color} opacity={0.14} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 const LABEL_ICON: Record<string, LucideIcon> = {
   "Data Feeds Today": RadioTowerIcon,
   "Healthy Feeds": ShieldCheckIcon,
@@ -90,11 +143,12 @@ export function KpiCard({ kpi, index = 0, onClick }: KpiCardProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05, ease: "easeOut" }}
-      whileHover={onClick ? { y: -2 } : undefined}
+      whileHover={{ y: -3, transition: { duration: 0.18 } }}
       className={cn(
-        "relative flex min-w-0 flex-col gap-1.5 rounded-xl border p-3 text-left shadow-sm transition-shadow",
+        "relative flex min-w-0 flex-col gap-1.5 rounded-xl border p-3 text-left shadow-sm transition-shadow duration-300 hover:shadow-lg",
         FILL[accent],
-        onClick && "hover:shadow-md"
+        GLOW[accent],
+        onClick && "cursor-pointer"
       )}
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
@@ -119,6 +173,11 @@ export function KpiCard({ kpi, index = 0, onClick }: KpiCardProps) {
         ) : null}
       </span>
       <span className="truncate text-[11px] text-muted-foreground">{kpi.sub}</span>
+      <Sparkline
+        seed={kpi.label}
+        dir={kpi.delta?.dir ?? "flat"}
+        color={SPARK_COLOR[accent]}
+      />
       {kpi.delta ? (
         <span
           className={cn(

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
 import { KpiCard, type AccentKey } from "@/components/kpi-card"
-import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
+import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
 import {
   fetchRunQualityCheck,
@@ -34,6 +34,7 @@ function scoreVariant(score: number): StatusChipVariant {
   if (score >= 75) return "medium"
   return "critical"
 }
+
 
 function weakDimensionCount(quality: QualityCheckResult) {
   return Object.values(quality.dimension_scores).filter((score) => score < 75).length
@@ -108,9 +109,9 @@ export function DataQualityPage() {
       header: "Tier",
       render: (row) =>
         row.quality ? (
-          <StatusChip variant={TIER_VARIANT[row.quality.tier] ?? "neutral"}>
+          <StatusText variant={TIER_VARIANT[row.quality.tier] ?? "neutral"}>
             {row.quality.tier}
-          </StatusChip>
+          </StatusText>
         ) : (
           <span className="text-muted-foreground">{row.loading ? "Loading…" : "—"}</span>
         ),
@@ -120,9 +121,9 @@ export function DataQualityPage() {
       header: "Approval",
       render: (row) =>
         row.quality ? (
-          <StatusChip variant={DECISION_STATUS_VARIANT[row.quality.status] ?? "medium"}>
+          <StatusText variant={DECISION_STATUS_VARIANT[row.quality.status] ?? "medium"}>
             {humanizeSnake(row.quality.status)}
-          </StatusChip>
+          </StatusText>
         ) : (
           <span className="text-muted-foreground">
             {row.loading ? "Loading…" : "No result yet"}
@@ -135,9 +136,9 @@ export function DataQualityPage() {
       align: "right",
       render: (row) =>
         row.quality ? (
-          <StatusChip variant={scoreVariant(row.quality.overall_score)}>
+          <StatusText variant={scoreVariant(row.quality.overall_score)}>
             {row.quality.overall_score}
-          </StatusChip>
+          </StatusText>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -150,7 +151,7 @@ export function DataQualityPage() {
         if (!row.quality) return <span className="text-muted-foreground">—</span>
         const weak = weakDimensionCount(row.quality)
         return weak > 0 ? (
-          <StatusChip variant="critical">{weak}</StatusChip>
+          <StatusText variant="critical">{weak}</StatusText>
         ) : (
           <span className="text-muted-foreground">None</span>
         )

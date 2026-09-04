@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 
 import { ChartTooltip } from "@/components/charts/chart-tooltip"
@@ -9,48 +10,6 @@ export type PieMetricDatum = {
   color: string
 }
 
-type PieLabelProps = {
-  cx?: number
-  cy?: number
-  midAngle?: number
-  innerRadius?: number
-  outerRadius?: number
-  percent?: number
-}
-
-const RADIAN = Math.PI / 180
-
-function InsideLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: PieLabelProps) {
-  if (
-    cx === undefined ||
-    cy === undefined ||
-    midAngle === undefined ||
-    innerRadius === undefined ||
-    outerRadius === undefined ||
-    !percent ||
-    percent < 0.08
-  ) {
-    return null
-  }
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.6
-  const x = cx + radius * Math.cos(-midAngle * RADIAN)
-  const y = cy + radius * Math.sin(-midAngle * RADIAN)
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="white"
-      textAnchor="middle"
-      dominantBaseline="central"
-      fontSize={11}
-      fontWeight={600}
-    >
-      {`${Math.round(percent * 100)}%`}
-    </text>
-  )
-}
-
 export function PieMetricChart({
   data,
   size = 152,
@@ -58,12 +17,19 @@ export function PieMetricChart({
   data: PieMetricDatum[]
   size?: number
 }) {
+  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const [hoverKey, setHoverKey] = useState(0)
   const total = data.reduce((sum, row) => sum + row.value, 0)
+
+  function resetHover() {
+    setActiveKey(null)
+    setHoverKey((k) => k + 1)
+  }
 
   return (
     <div className="flex items-center gap-4">
       <div style={{ width: size, height: size }} className="shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" onMouseLeave={resetHover}>
           <PieChart>
             <Pie
               data={data}
@@ -73,20 +39,36 @@ export function PieMetricChart({
               paddingAngle={data.length > 1 ? 2 : 0}
               stroke="var(--color-card)"
               strokeWidth={2}
-              label={InsideLabel}
-              labelLine={false}
+              animationDuration={700}
+              animationEasing="ease-out"
+              onMouseEnter={(row) => setActiveKey(typeof row.key === "string" ? row.key : null)}
+              onMouseLeave={resetHover}
             >
               {data.map((row) => (
-                <Cell key={row.key} fill={row.color} />
+                <Cell
+                  key={row.key}
+                  fill={row.color}
+                  style={{
+                    transition: "opacity 150ms",
+                    filter: "drop-shadow(0 1px 3px color-mix(in oklab, var(--color-standard) 45%, transparent))",
+                  }}
+                  opacity={activeKey && activeKey !== row.key ? 0.45 : 1}
+                />
               ))}
             </Pie>
-            <Tooltip content={<ChartTooltip />} />
+            <Tooltip key={hoverKey} content={<ChartTooltip />} />
           </PieChart>
         </ResponsiveContainer>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {data.map((row) => (
-          <div key={row.key} className="flex items-center gap-1.5 text-[11px]">
+          <div
+            key={row.key}
+            className="flex items-center gap-1.5 text-[11px] transition-opacity"
+            style={{ opacity: activeKey && activeKey !== row.key ? 0.5 : 1 }}
+            onMouseEnter={() => setActiveKey(row.key)}
+            onMouseLeave={() => setActiveKey(null)}
+          >
             <span
               className="size-2 shrink-0 rounded-full"
               style={{ background: row.color }}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { CheckIcon, CopyIcon, TriangleAlertIcon } from "lucide-react"
+import { ChevronDownIcon, CheckIcon, CopyIcon, TriangleAlertIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -69,6 +69,7 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
   const dispatch = useAppDispatch()
   const analysis = useAppSelector(selectEtlFailureAnalysis(runId))
   const attempts = useAppSelector(selectEtlAttempts(runId))
+  const [rootCauseExpanded, setRootCauseExpanded] = useState(false)
 
   useEffect(() => {
     dispatch(fetchEtlFailureAnalysis(runId))
@@ -91,6 +92,12 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
 
   const data = analysis.data
   const attempt = attempts?.data.find((item) => item.attempt_id === data.attempt_id)
+  const hasRootCauseDetail = Boolean(
+    data.root_cause.failing_stage ||
+      data.root_cause.failing_column ||
+      data.root_cause.expected_column ||
+      data.root_cause.investigation_trail
+  )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -132,11 +139,48 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
 
       <div className="flex items-start gap-2 border border-status-warning/40 bg-status-warning/15 p-3">
         <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-status-warning-foreground" />
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold text-status-warning-foreground">Root Cause</p>
           <p className="mt-1 text-[12px] leading-relaxed text-status-warning-foreground">
-            {data.root_cause}
+            {data.root_cause.summary}
           </p>
+          {hasRootCauseDetail ? (
+            <button
+              type="button"
+              onClick={() => setRootCauseExpanded((prev) => !prev)}
+              className="mt-1.5 flex items-center gap-1 text-[10.5px] font-semibold text-status-info underline underline-offset-2 hover:text-status-info/80"
+            >
+              <ChevronDownIcon
+                className={`size-3 transition-transform duration-200 ${rootCauseExpanded ? "rotate-180" : ""}`}
+              />
+              {rootCauseExpanded ? "Show less" : "Show more"}
+            </button>
+          ) : null}
+          {rootCauseExpanded ? (
+            <div className="mt-2 flex flex-col gap-1 border-t border-status-warning/30 pt-2 text-[11px] text-status-warning-foreground">
+              {data.root_cause.failing_stage ? (
+                <p>
+                  <span className="font-semibold">Failing stage:</span> {data.root_cause.failing_stage}
+                </p>
+              ) : null}
+              {data.root_cause.failing_column ? (
+                <p>
+                  <span className="font-semibold">Failing column:</span> {data.root_cause.failing_column}
+                </p>
+              ) : null}
+              {data.root_cause.expected_column ? (
+                <p>
+                  <span className="font-semibold">Expected column:</span> {data.root_cause.expected_column}
+                </p>
+              ) : null}
+              {data.root_cause.investigation_trail ? (
+                <p className="leading-relaxed">
+                  <span className="font-semibold">Investigation trail:</span>{" "}
+                  {data.root_cause.investigation_trail}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -183,7 +227,7 @@ export function EtlFailureAnalysisDrawerBody({ runId }: { runId: string }) {
       <SheetHeader>
         <SheetTitle>ETL Failure Analysis</SheetTitle>
       </SheetHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-8 pb-16">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-8 pb-28">
         <EtlFailureAnalysisContent runId={runId} />
       </div>
     </SheetContent>

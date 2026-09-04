@@ -37,6 +37,14 @@ function messageForPausedStatus(status?: string): string {
       return "ETL failed -- corrected script ready for retry"
     case "failed_max_retries":
       return "ETL failed after max retries"
+    case "cancelled":
+      return "Run cancelled"
+    case "cancel_requested":
+      return "Cancelling..."
+    case "paused":
+      return "Run paused"
+    case "pause_requested":
+      return "Pausing..."
     default:
       return "Run paused"
   }
@@ -52,6 +60,8 @@ export function messageForRunStatus(status: string): string {
       return "Run halted"
     case "etl_validation_failed":
       return "Output validation failed"
+    case "failed":
+      return "Run failed"
     default:
       return messageForPausedStatus(status)
   }
@@ -91,8 +101,10 @@ export function describeEvent(event: RunFlowEvent): { stage?: StageKey; status?:
       return { stage: "etl", status: "etl_validation_failed", message: "Output validation failed" }
     case "etl_attempt_failed":
       return { stage: "etl", message: "ETL attempt failed -- analyzing root cause..." }
-    case "failure_analysis_complete":
-      return { stage: "etl", message: `Root cause: ${event.root_cause ?? "unknown"}` }
+    case "failure_analysis_complete": {
+      const summary = (event.root_cause as { summary?: string } | undefined)?.summary
+      return { stage: "etl", message: `Root cause: ${summary ?? "unknown"}` }
+    }
     case "error":
       return { status: "failed", message: typeof event.detail === "string" ? event.detail : "Run failed" }
     default:

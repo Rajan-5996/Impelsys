@@ -100,6 +100,53 @@ export const fetchActiveRun = createAsyncThunk("runFlow/fetchActiveRun", async (
   return response.data
 })
 
+type RunActionResponse = { run_id: string; status: string }
+
+export const cancelRun = createAsyncThunk(
+  "runFlow/cancelRun",
+  async ({ runId, actor = "operator" }: { runId: string; actor?: string }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post<RunActionResponse>(
+        `/api/smart-etl/runs/${runId}/cancel`,
+        { actor }
+      )
+      return response.data
+    } catch (error) {
+      return rejectWithValue(extractErrorDetail(error) ?? "Failed to cancel the run.")
+    }
+  }
+)
+
+export const pauseRun = createAsyncThunk(
+  "runFlow/pauseRun",
+  async ({ runId, actor = "operator" }: { runId: string; actor?: string }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post<RunActionResponse>(
+        `/api/smart-etl/runs/${runId}/pause`,
+        { actor }
+      )
+      return response.data
+    } catch (error) {
+      return rejectWithValue(extractErrorDetail(error) ?? "Failed to pause the run.")
+    }
+  }
+)
+
+export const resumeRun = createAsyncThunk(
+  "runFlow/resumeRun",
+  async ({ runId, actor = "operator" }: { runId: string; actor?: string }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post<RunActionResponse>(
+        `/api/smart-etl/runs/${runId}/resume`,
+        { actor }
+      )
+      return response.data
+    } catch (error) {
+      return rejectWithValue(extractErrorDetail(error) ?? "Failed to resume the run.")
+    }
+  }
+)
+
 export const fetchRunQualityCheck = createAsyncThunk(
   "runFlow/fetchRunQualityCheck",
   async (runId: string, { rejectWithValue }) => {
@@ -148,6 +195,15 @@ const runFlowSlice = createSlice({
       })
       .addCase(triggerRunStream.fulfilled, (state) => {
         state.streaming = false
+      })
+      .addCase(cancelRun.fulfilled, (state, action) => {
+        state.status = action.payload.status
+      })
+      .addCase(pauseRun.fulfilled, (state, action) => {
+        state.status = action.payload.status
+      })
+      .addCase(resumeRun.fulfilled, (state, action) => {
+        state.status = action.payload.status
       })
       .addCase(fetchActiveRun.fulfilled, (state, action) => {
         state.runId = action.payload.run_id

@@ -42,6 +42,7 @@ export function QaAnalysisFlow() {
         stages={QA_STAGE_ORDER}
         labels={STAGE_LABELS}
         activeIndex={activeIndex}
+        settled={status === "completed"}
         nodeState={(stageKey, index) => nodeVisualState(stageKey, index, activeIndex, status, streaming)}
       />
       <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-border pt-3">

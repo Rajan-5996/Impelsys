@@ -12,7 +12,7 @@ import {
 
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
-import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
+import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { runDetailPath } from "@/constants/routes"
 import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
 import { fetchRuns, selectRuns, selectRunsError, selectRunsStatus, type Run } from "@/store/runs-slice"
@@ -27,6 +27,11 @@ const STATUS_VARIANT: Record<string, StatusChipVariant> = {
   halted: "critical",
   etl_validation_failed: "critical",
   failed_max_retries: "critical",
+  failed: "critical",
+  cancelled: "critical",
+  cancel_requested: "medium",
+  paused: "medium",
+  pause_requested: "medium",
 }
 
 const COLUMNS: DataTableColumn<Run>[] = [
@@ -35,9 +40,9 @@ const COLUMNS: DataTableColumn<Run>[] = [
     key: "status",
     header: "Status",
     render: (row) => (
-      <StatusChip variant={STATUS_VARIANT[row.status] ?? "medium"}>
+      <StatusText variant={STATUS_VARIANT[row.status] ?? "medium"}>
         {humanizeSnake(row.status)}
-      </StatusChip>
+      </StatusText>
     ),
   },
   {

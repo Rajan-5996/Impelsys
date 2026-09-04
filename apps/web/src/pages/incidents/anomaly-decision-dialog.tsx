@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Loader2Icon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -89,7 +90,16 @@ export function AnomalyDecisionDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {decision?.approve ? "Approve" : "Reject"}
+            {submitting ? (
+              <>
+                <Loader2Icon className="animate-spin" />
+                {decision?.approve ? "Approving..." : "Rejecting..."}
+              </>
+            ) : decision?.approve ? (
+              "Approve"
+            ) : (
+              "Reject"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

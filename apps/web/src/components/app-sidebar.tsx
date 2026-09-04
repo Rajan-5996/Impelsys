@@ -82,14 +82,12 @@ function SidebarUserMenu({ isExpanded }: { isExpanded: boolean }) {
 
 export function AppSidebar() {
   const location = useLocation()
-  const { isMobile, setOpen, state } = useSidebar()
+  const { state } = useSidebar()
   const isExpanded = state === "expanded"
 
   return (
     <Sidebar
       collapsible="icon"
-      onMouseEnter={() => !isMobile && setOpen(true)}
-      onMouseLeave={() => !isMobile && setOpen(false)}
       style={
         {
           "--sidebar": "var(--standard)",
@@ -101,7 +99,17 @@ export function AppSidebar() {
         } as React.CSSProperties
       }
     >
-      <SidebarHeader className="px-3 pt-4 pb-2 group-data-[collapsible=icon]:px-0">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-72 opacity-20"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1.4px)",
+          backgroundSize: "10px 10px",
+          maskImage: "linear-gradient(to top, black 0%, black 15%, transparent 95%)",
+          WebkitMaskImage: "linear-gradient(to top, black 0%, black 15%, transparent 95%)",
+        }}
+      />
+      <SidebarHeader className="relative z-10 px-3 pt-4 pb-2 group-data-[collapsible=icon]:px-0">
         <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white p-1">
             <img src={logo} alt="Logo" className="size-full object-contain" />
@@ -122,7 +130,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="relative z-10">
         {navGroups.map((group, index) => (
           <Fragment key={group.label}>
             {index > 0 ? <SidebarSeparator /> : null}
@@ -139,7 +147,14 @@ export function AppSidebar() {
                         : location.pathname.startsWith(item.path)
 
                     return (
-                      <SidebarMenuItem key={item.title}>
+                      <SidebarMenuItem key={item.title} className="relative">
+                        {isActive ? (
+                          <motion.span
+                            layoutId="sidebar-active-indicator"
+                            className="absolute inset-y-1.5 left-0 z-10 w-[3px] rounded-r-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.55)]"
+                            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                          />
+                        ) : null}
                         <SidebarMenuButton
                           render={<NavLink to={item.path} />}
                           isActive={isActive}
@@ -175,7 +190,7 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+      <SidebarFooter className="relative z-10 border-t border-sidebar-border px-2 py-2">
         <SidebarUserMenu isExpanded={isExpanded} />
       </SidebarFooter>
     </Sidebar>

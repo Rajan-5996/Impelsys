@@ -1,6 +1,5 @@
 export const ROUTES = {
   commandCenter: "/",
-  suppliers: "/suppliers",
   supplierDetail: "/suppliers/:supplierId",
   pipeline: "/pipeline",
   connectors: "/connectors",
@@ -13,6 +12,8 @@ export const ROUTES = {
   settings: "/settings",
   incidents: "/incidents",
   runDetail: "/incidents/runs/:runId",
+  dataAnalystAgent: "/data-analyst-agent",
+  metadataLakehouse: "/metadata-lakehouse",
 } as const
 
 export function supplierDetailPath(supplierId: string) {
@@ -46,7 +47,6 @@ export const LIFECYCLE_STEPS: LifecycleStep[] = [
 
 export const ROUTE_LIFECYCLE_STEP: Record<string, LifecycleStep | null> = {
   [ROUTES.commandCenter]: null,
-  [ROUTES.suppliers]: "Detect",
   [ROUTES.supplierDetail]: "Detect",
   [ROUTES.pipeline]: "Diagnose",
   [ROUTES.connectors]: null,
@@ -59,4 +59,6 @@ export const ROUTE_LIFECYCLE_STEP: Record<string, LifecycleStep | null> = {
   [ROUTES.settings]: null,
   [ROUTES.incidents]: null,
   [ROUTES.runDetail]: null,
+  [ROUTES.dataAnalystAgent]: null,
+  [ROUTES.metadataLakehouse]: null,
 }

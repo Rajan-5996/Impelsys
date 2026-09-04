@@ -8,8 +8,8 @@ import {
 
 import { EmptyState } from "@/components/empty-state"
 import { Gauge, MetricBar } from "@/components/metrics"
-import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
-import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
+import { StatusText, type StatusChipVariant } from "@/components/status-chip"
+import { humanizeSnake } from "@/lib/format-labels"
 import { fetchRunQualityCheck, selectRunQualityCheck } from "@/store/run-flow-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 
@@ -30,17 +30,6 @@ function dimensionVariant(score: number): StatusChipVariant {
   if (score >= 90) return "ok"
   if (score >= 75) return "medium"
   return "critical"
-}
-
-const DIMENSION_DESCRIPTIONS: Record<string, string> = {
-  freshness: "Share of rows within the expected recency window.",
-  completeness: "Share of required fields that are populated.",
-  validity: "Share of values conforming to the expected format or type.",
-  accuracy: "Share of values that are numerically or logically correct.",
-  consistency: "Share of values consistent across related fields.",
-  uniqueness: "Share of rows free of unwanted duplicates.",
-  referential_integrity: "Share of foreign-key values that resolve to a known record.",
-  null_checks: "Share of critical fields free of unexpected nulls.",
 }
 
 export function QualityCheckDrawerBody({ runId }: { runId: string }) {
@@ -92,10 +81,11 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
           <div className="flex flex-col gap-2">
             <span className="text-[11.5px] font-semibold text-foreground">{runId}</span>
             <div className="flex flex-wrap items-center gap-2">
-              <StatusChip variant={TIER_VARIANT[data.tier] ?? "neutral"}>{data.tier}</StatusChip>
-              <StatusChip variant={DECISION_STATUS_VARIANT[data.status] ?? "medium"}>
+              <StatusText variant={TIER_VARIANT[data.tier] ?? "neutral"}>{data.tier}</StatusText>
+              <span className="text-border">&middot;</span>
+              <StatusText variant={DECISION_STATUS_VARIANT[data.status] ?? "medium"}>
                 {humanizeSnake(data.status)}
-              </StatusChip>
+              </StatusText>
             </div>
           </div>
           <Gauge score={data.overall_score} size={80} />
@@ -107,11 +97,11 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
         </p>
 
         {weakDimensions.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
             {weakDimensions.map(([dimension, score]) => (
-              <StatusChip key={dimension} variant="critical">
+              <StatusText key={dimension} variant="critical">
                 {humanizeSnake(dimension)}: {score}
-              </StatusChip>
+              </StatusText>
             ))}
           </div>
         ) : null}
@@ -123,23 +113,11 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
               <div className="flex-1">
                 <MetricBar label={humanizeSnake(dimension)} value={score} />
               </div>
-              <StatusChip variant={dimensionVariant(score)} className="shrink-0">
+              <StatusText variant={dimensionVariant(score)} className="w-14 shrink-0 text-right">
                 {score >= 90 ? "Healthy" : score >= 75 ? "Watch" : "Weak"}
-              </StatusChip>
+              </StatusText>
             </div>
           ))}
-        </div>
-
-        <div className="border-t border-dashed border-border pt-4">
-          <p className="mb-3 text-[11px] font-semibold text-foreground">Dimension Glossary</p>
-          <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-[10.5px] leading-relaxed text-muted-foreground sm:grid-cols-2">
-            {dimensionEntries.map(([dimension]) => (
-              <p key={dimension}>
-                <span className="font-semibold text-foreground">{humanizeSnake(dimension)}:</span>{" "}
-                {DIMENSION_DESCRIPTIONS[dimension] ?? "Weighted quality dimension for this run."}
-              </p>
-            ))}
-          </div>
         </div>
 
         {data.issues.length > 0 ? (
@@ -154,13 +132,6 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
             </div>
           </div>
         ) : null}
-
-        <div className="flex flex-col gap-1.5 border-t border-dashed border-border pt-4 text-[10.5px] text-muted-foreground">
-          <span>Decided By: {data.decided_by ?? "—"}</span>
-          {data.decision_note ? <span>Note: {data.decision_note}</span> : null}
-          <span>Created: {formatTimestamp(data.created_at)}</span>
-          {data.decided_at ? <span>Decided: {formatTimestamp(data.decided_at)}</span> : null}
-        </div>
       </div>
     </SheetContent>
   )

@@ -1,31 +1,38 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import { PauseIcon, PlayIcon, XIcon } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import { Button } from "@workspace/ui/components/button"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
-import { StageFlow, type StageNodeState } from "@/components/stage-flow"
+import { PipelineParticleField } from "@/components/pipeline-particle-field"
+import { StageFlow } from "@/components/stage-flow"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { runDetailPath } from "@/constants/routes"
 import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
+import { nodeVisualState, STAGE_LABELS, TERMINAL_STATUSES } from "@/lib/stage-visual"
 import type { ActivityFeedEntry } from "@/store/command-center-slice"
 import { fetchEtlAttempts, selectEtlAttempts } from "@/store/etl-slice"
 import { fetchPipelineAuditTrail, selectPipelineAuditTrail } from "@/store/pipeline-slice"
-import { STAGE_ORDER, selectRunFlow, type StageKey } from "@/store/run-flow-slice"
+import {
+  cancelRun,
+  fetchActiveRun,
+  pauseRun,
+  resumeRun,
+  STAGE_ORDER,
+  selectRunFlow,
+} from "@/store/run-flow-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { openDrawer } from "@/store/ui-slice"
-
-const STAGE_LABELS: Record<StageKey, string> = {
-  ingestion: "Ingestion",
-  anomaly_detection: "Anomaly Detection",
-  quality_check: "Quality Check",
-  etl: "ETL",
-  done: "Done",
-}
-
-const FAILED_STATUSES = new Set(["halted", "etl_validation_failed", "failed_max_retries", "failed"])
-const PAUSED_STATUSES = new Set(["awaiting_anomaly_approval", "awaiting_dq_approval", "awaiting_retry"])
+import { openDrawer, pushToast } from "@/store/ui-slice"
 
 const STATUS_VARIANT: Record<string, StatusChipVariant> = {
   running: "low",
@@ -37,39 +44,70 @@ const STATUS_VARIANT: Record<string, StatusChipVariant> = {
   etl_validation_failed: "critical",
   failed_max_retries: "critical",
   failed: "critical",
-}
-
-function nodeVisualState(
-  stageKey: StageKey,
-  index: number,
-  activeIndex: number,
-  status: string | null,
-  streaming: boolean
-): StageNodeState {
-  if (index < activeIndex) return "done"
-  if (index > activeIndex) return "pending"
-  if (stageKey === "done" && status === "completed") return "done"
-  if (status && FAILED_STATUSES.has(status)) return "failed"
-  if (status && PAUSED_STATUSES.has(status)) return "paused"
-  return streaming ? "active" : "in-progress"
+  cancelled: "critical",
+  cancel_requested: "medium",
+  paused: "medium",
+  pause_requested: "medium",
 }
 
 export function PipelineRunFlow() {
   const dispatch = useAppDispatch()
   const { runId, currentStage, status, message, streaming } = useAppSelector(selectRunFlow)
   const attempts = useAppSelector(selectEtlAttempts(runId ?? ""))
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [actionBusy, setActionBusy] = useState(false)
+  const [pauseRequested, setPauseRequested] = useState(false)
+  const isPaused = pauseRequested || status === "paused"
 
   useEffect(() => {
     if (runId) dispatch(fetchEtlAttempts(runId))
+    setPauseRequested(false)
   }, [dispatch, runId])
+
+  async function handlePauseToggle() {
+    if (!runId) return
+    setActionBusy(true)
+    try {
+      if (isPaused) {
+        await dispatch(resumeRun({ runId })).unwrap()
+        setPauseRequested(false)
+        dispatch(pushToast("Run resumed.", "success"))
+      } else {
+        await dispatch(pauseRun({ runId })).unwrap()
+        setPauseRequested(true)
+        dispatch(pushToast("Pause requested -- takes effect after the current stage.", "info"))
+      }
+      dispatch(fetchActiveRun(runId))
+    } catch (error) {
+      dispatch(pushToast(typeof error === "string" ? error : "Action failed.", "warn"))
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  async function handleCancelConfirm() {
+    if (!runId) return
+    setActionBusy(true)
+    try {
+      await dispatch(cancelRun({ runId })).unwrap()
+      dispatch(pushToast("Run cancelled.", "success"))
+      dispatch(fetchActiveRun(runId))
+    } catch (error) {
+      dispatch(pushToast(typeof error === "string" ? error : "Cancel failed.", "warn"))
+    } finally {
+      setActionBusy(false)
+      setCancelOpen(false)
+    }
+  }
 
   if (!runId) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="relative overflow-hidden">
+        <PipelineParticleField density={28} />
+        <CardHeader className="relative z-10">
           <CardTitle>Smart ETL Run Flow</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative z-10">
           <EmptyState message="No run triggered yet -- click Trigger Agent to start one." />
         </CardContent>
       </Card>
@@ -80,17 +118,51 @@ export function PipelineRunFlow() {
   const qualityCheckIndex = STAGE_ORDER.indexOf("quality_check")
   const hasFailedEtlAttempt = attempts?.data.some((attempt) => attempt.status === "failed") ?? false
   const qualityCheckReached = activeIndex >= qualityCheckIndex
+  const runControlsVisible = !status || !TERMINAL_STATUSES.has(status)
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Smart ETL Run Flow</CardTitle>
+    <>
+    <Card className="relative overflow-hidden">
+      <PipelineParticleField active={streaming} density={54} />
+      <CardHeader className="relative z-10">
+        <CardTitle className="flex items-center gap-2">
+          Smart ETL Run Flow
+          {streaming ? (
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            </span>
+          ) : null}
+        </CardTitle>
+        {runControlsVisible ? (
+          <CardAction className="flex items-center gap-2">
+            <Button variant="outline" size="xs" onClick={handlePauseToggle} disabled={actionBusy}>
+              {isPaused ? <PlayIcon /> : <PauseIcon />}
+              {isPaused ? "Continue" : "Pause"}
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => setCancelOpen(true)}
+              disabled={actionBusy}
+              className="border-0 text-status-critical-foreground hover:brightness-110"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
+              }}
+            >
+              <XIcon />
+              Cancel
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="relative z-10 flex flex-col gap-4">
         <StageFlow
           stages={STAGE_ORDER}
           labels={STAGE_LABELS}
           activeIndex={activeIndex}
+          settled={!!status && TERMINAL_STATUSES.has(status)}
           nodeState={(stageKey, index) => nodeVisualState(stageKey, index, activeIndex, status, streaming)}
           isNodeClickable={(stageKey) =>
             (stageKey === "etl" && hasFailedEtlAttempt) ||
@@ -129,6 +201,37 @@ export function PipelineRunFlow() {
         </div>
       </CardContent>
     </Card>
+
+    <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+      <DialogContent size="narrow">
+        <DialogHeader>
+          <DialogTitle>Cancel this run?</DialogTitle>
+        </DialogHeader>
+        <div className="p-5">
+          <p className="text-xs text-muted-foreground">
+            This stops the Smart ETL run in progress. Any stage already completed
+            will remain recorded, but the remaining stages will not run.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setCancelOpen(false)} disabled={actionBusy}>
+            Keep Running
+          </Button>
+          <Button
+            onClick={handleCancelConfirm}
+            disabled={actionBusy}
+            className="border-0 text-status-critical-foreground hover:brightness-110"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
+            }}
+          >
+            {actionBusy ? "Cancelling..." : "Cancel Run"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 

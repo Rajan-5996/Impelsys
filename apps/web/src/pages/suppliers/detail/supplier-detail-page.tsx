@@ -10,6 +10,7 @@ import {
 } from "@workspace/ui/components/tabs"
 
 import { EmptyState } from "@/components/empty-state"
+import { ROUTES } from "@/constants/routes"
 import { ContractsTab } from "@/pages/suppliers/detail/tabs/contracts-tab"
 import { FeedsTab } from "@/pages/suppliers/detail/tabs/feeds-tab"
 import { HistoryTab } from "@/pages/suppliers/detail/tabs/history-tab"
@@ -46,8 +47,8 @@ export function SupplierDetailPage() {
     return (
       <div className="flex flex-col gap-3">
         <EmptyState message={error ?? "Supplier not found."} />
-        <Link to="/suppliers" className="text-xs font-semibold text-primary">
-          Back to Supplier Monitor
+        <Link to={ROUTES.commandCenter} className="text-xs font-semibold text-primary">
+          Back to Dashboard
         </Link>
       </div>
     )

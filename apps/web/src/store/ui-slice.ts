@@ -14,7 +14,9 @@ export type DrawerDescriptor =
   | { type: "scorecard"; supplierId: string }
   | { type: "agent-activity"; agentId: string }
   | { type: "etl-failure-analysis"; runId: string }
+  | { type: "etl-retry"; runId: string }
   | { type: "quality-check"; runId: string }
+  | { type: "anomaly-status-list"; status: "pending" | "approved" | "rejected" }
 
 export type ToastVariant = "success" | "info" | "warn"
 

@@ -1,7 +1,9 @@
 import { Sheet } from "@workspace/ui/components/sheet"
 
 import { AgentActivityDrawerBody } from "@/components/overlays/agent-activity-drawer-body"
+import { AnomalyStatusListDrawerBody } from "@/components/overlays/anomaly-status-list-drawer-body"
 import { EtlFailureAnalysisDrawerBody } from "@/components/overlays/etl-failure-analysis-drawer-body"
+import { EtlRetryDrawerBody } from "@/components/overlays/etl-retry-drawer-body"
 import { QualityCheckDrawerBody } from "@/components/overlays/quality-check-drawer-body"
 import { ScorecardDrawerBody } from "@/components/overlays/scorecard-drawer-body"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
@@ -27,8 +29,14 @@ export function DrawerHost() {
       {drawer?.type === "etl-failure-analysis" ? (
         <EtlFailureAnalysisDrawerBody runId={drawer.runId} />
       ) : null}
+      {drawer?.type === "etl-retry" ? (
+        <EtlRetryDrawerBody runId={drawer.runId} />
+      ) : null}
       {drawer?.type === "quality-check" ? (
         <QualityCheckDrawerBody runId={drawer.runId} />
+      ) : null}
+      {drawer?.type === "anomaly-status-list" ? (
+        <AnomalyStatusListDrawerBody status={drawer.status} />
       ) : null}
     </Sheet>
   )

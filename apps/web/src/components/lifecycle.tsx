@@ -1,8 +1,10 @@
 import { matchPath, useLocation } from "react-router-dom"
+import { motion } from "framer-motion"
 import { CheckIcon } from "lucide-react"
 
 import { cn } from "@workspace/ui/lib/utils"
 
+import { PipelineParticleField } from "@/components/pipeline-particle-field"
 import { LIFECYCLE_STEPS, ROUTE_LIFECYCLE_STEP, ROUTES } from "@/constants/routes"
 import type { LifecycleFlowStep } from "@/store/command-center-slice"
 
@@ -22,7 +24,7 @@ export function LifecycleStepper() {
   const currentIndex = LIFECYCLE_STEPS.indexOf(currentStep)
 
   return (
-    <div className="flex items-center gap-0 border-b border-border bg-card px-5 py-1.5">
+    <div className="flex items-center gap-0 border-b border-border/60 px-5 py-1.5">
       <span className="mr-3.5 border-r border-border pr-3.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
         Core Journey
       </span>
@@ -79,12 +81,62 @@ function pointOnCircle(angleDeg: number, radius: number) {
   }
 }
 
+function seededUnit(seed: number) {
+  const x = Math.sin(seed * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function ScatteredParticles({
+  from,
+  to,
+  seedBase,
+}: {
+  from: { x: number; y: number }
+  to: { x: number; y: number }
+  seedBase: number
+}) {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+
+  return (
+    <>
+      {[0, 1, 2].map((p) => {
+        const seed = seedBase * 17 + p * 5
+        const delay = seededUnit(seed + 1) * 2.4
+        const duration = 2.2 + seededUnit(seed + 2) * 1.2
+
+        return (
+          <motion.circle
+            key={p}
+            r={0.5}
+            fill="var(--color-primary)"
+            initial={{ cx: from.x, cy: from.y, opacity: 0 }}
+            animate={{
+              cx: [from.x, from.x + dx * 0.15, from.x + dx * 0.85, to.x],
+              cy: [from.y, from.y + dy * 0.15, from.y + dy * 0.85, to.y],
+              opacity: [0, 0.9, 0.9, 0],
+            }}
+            transition={{
+              repeat: Infinity,
+              duration,
+              delay,
+              ease: "linear",
+              times: [0, 0.15, 0.85, 1],
+            }}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
   const angleStep = 360 / steps.length
   const positions = steps.map((_, index) => pointOnCircle(-90 + index * angleStep, NODE_RADIUS))
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[560px]">
+    <div className="relative mx-auto aspect-square w-full max-w-[300px]">
+      <PipelineParticleField density={30} />
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0 size-full" aria-hidden>
         <defs>
           <marker
@@ -105,44 +157,73 @@ export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
           const to = pointOnCircle(endAngle, NODE_RADIUS)
           const d = `M ${from.x} ${from.y} A ${NODE_RADIUS} ${NODE_RADIUS} 0 0 1 ${to.x} ${to.y}`
           return (
-            <path
-              key={`${step.stage}-connector`}
-              d={d}
-              fill="none"
-              stroke="var(--color-primary)"
-              strokeOpacity={0.7}
-              strokeWidth={0.3}
-              strokeDasharray="0.6 0.6"
-              strokeLinecap="round"
-              markerEnd="url(#lifecycle-arrow)"
-              style={{ animation: "lifecycle-flow-dash 18s linear infinite" }}
-            />
+            <g key={`${step.stage}-connector`}>
+              <path
+                d={d}
+                fill="none"
+                stroke="var(--color-primary)"
+                strokeOpacity={0.7}
+                strokeWidth={0.3}
+                strokeDasharray="0.6 0.6"
+                strokeLinecap="round"
+                markerEnd="url(#lifecycle-arrow)"
+                style={{ animation: "lifecycle-flow-dash 18s linear infinite" }}
+              />
+              <ScatteredParticles from={from} to={to} seedBase={index + 1} />
+            </g>
           )
         })}
       </svg>
+      <div
+        className="absolute flex flex-col items-center justify-center rounded-full"
+        style={{
+          left: "50%",
+          top: "50%",
+          width: "68%",
+          height: "68%",
+          transform: "translate(-50%, -50%)",
+          background:
+            "radial-gradient(circle, var(--color-standard) 0%, color-mix(in oklab, var(--color-standard) 88%, var(--color-accent) 12%) 10%, color-mix(in oklab, var(--color-standard) 62%, var(--color-accent) 38%) 19%, color-mix(in oklab, var(--color-accent) 75%, transparent) 29%, color-mix(in oklab, var(--color-accent) 46%, transparent) 38%, color-mix(in oklab, var(--color-accent) 22%, transparent) 48%, color-mix(in oklab, var(--color-accent) 8%, transparent) 58%, transparent 68%)",
+          border: "none",
+        }}
+      >
+        <p className="text-center text-[11px] font-bold tracking-wide text-white uppercase">
+          Data
+          <br />
+          Lifecycle
+        </p>
+      </div>
       {steps.map((step, index) => {
         const { x, y } = positions[index]!
         return (
           <div
             key={step.stage}
-            className="absolute flex flex-col items-center justify-center rounded-full p-1.5 text-center shadow-sm"
+            className="absolute"
             style={{
               left: `${x}%`,
               top: `${y}%`,
               width: `${NODE_SIZE_PCT}%`,
               height: `${NODE_SIZE_PCT}%`,
               transform: "translate(-50%, -50%)",
-              backgroundColor: "color-mix(in oklab, var(--color-primary) 10%, var(--color-card))",
-              border: "1px solid color-mix(in oklab, var(--color-primary) 25%, var(--color-border))",
             }}
           >
-            <span
-              className="pointer-events-none absolute inset-[4%] rounded-full border"
-              style={{ borderColor: "color-mix(in oklab, var(--color-primary) 30%, var(--color-border))" }}
-            />
-            <p className="truncate text-[13px] font-bold text-foreground">{step.count}</p>
-            <p className="truncate text-[9.5px] font-semibold text-foreground">{step.stage}</p>
-            <p className="truncate text-[7.5px] text-muted-foreground">{step.unit}</p>
+            <div
+              title={step.stage}
+              className="relative flex size-full flex-col items-center justify-center rounded-full p-1.5 text-center shadow-sm transition-transform duration-200 hover:scale-110"
+              style={{
+                backgroundColor: "color-mix(in oklab, var(--color-primary) 10%, var(--color-card))",
+                border: "1px solid color-mix(in oklab, var(--color-primary) 25%, var(--color-border))",
+              }}
+            >
+              <span
+                className="pointer-events-none absolute inset-[4%] rounded-full border"
+                style={{ borderColor: "color-mix(in oklab, var(--color-primary) 30%, var(--color-border))" }}
+              />
+              <p className="w-full text-[10px] leading-none font-bold text-foreground">{step.count}</p>
+              <p className="mt-0.5 w-full px-0.5 text-[6.5px] leading-[1.05] font-semibold break-words text-foreground">
+                {step.stage}
+              </p>
+            </div>
           </div>
         )
       })}

@@ -26,12 +26,20 @@ export type EtlAttempt = {
   created_at: string
 }
 
+export type EtlRootCause = {
+  summary: string
+  failing_stage: string | null
+  failing_column: string | null
+  expected_column: string | null
+  investigation_trail: string | null
+}
+
 export type EtlFailureAnalysis = {
   analysis_id: string
   attempt_id: string
   source: string
   error_message: string | null
-  root_cause: string
+  root_cause: EtlRootCause
   corrected_script: string | null
   confidence: string
   created_at: string
