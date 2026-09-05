@@ -35,7 +35,7 @@ export const fetchSearchResults = createAsyncThunk(
   "search/fetchSearchResults",
   async (query: string) => {
     if (!query.trim()) return emptyResults
-    const response = await axiosInstance.get<SearchResults>("/api/search", {
+    const response = await axiosInstance.get<SearchResults>("/search", {
       params: { q: query },
     })
     return response.data

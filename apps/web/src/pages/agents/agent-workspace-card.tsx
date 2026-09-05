@@ -10,6 +10,7 @@ import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
+import { AGENT_SHORT_LABEL } from "@/lib/agent-labels"
 import type { Agent } from "@/store/agents-slice"
 import { useAppDispatch } from "@/store/hooks"
 import { openDrawer } from "@/store/ui-slice"
@@ -69,7 +70,9 @@ export function AgentWorkspaceCard({ agent }: { agent: Agent }) {
             <Icon className="size-4" />
           </span>
           <div>
-            <p className="text-[13px] font-bold text-foreground">{agent.name}</p>
+            <p className="text-[13px] font-bold text-foreground">
+              {AGENT_SHORT_LABEL[agent.id] ?? agent.name}
+            </p>
             <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
               <span
                 className={cn(

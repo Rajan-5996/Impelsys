@@ -39,7 +39,7 @@ export function RunFilesList({ runId }: { runId: string }) {
       {files.data.map((file) => (
         <a
           key={file.filename}
-          href={apiFileUrl(`/api/smart-etl/runs/${runId}/files/${file.filename}`)}
+          href={apiFileUrl(`/smart-etl/runs/${runId}/files/${file.filename}`)}
           download={file.filename}
           className="flex flex-wrap items-center justify-between gap-2 border border-border px-3 py-2 text-[11.5px] hover:bg-muted/30"
         >

@@ -7,6 +7,7 @@ import {
 } from "@workspace/ui/components/dialog"
 
 import { EmptyState } from "@/components/empty-state"
+import { AUDIT_AGENT_DISPLAY_LABEL } from "@/lib/agent-labels"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { fetchKbArticleById, selectCurrentKbArticle } from "@/store/knowledge-slice"
 import type { ModalDescriptor } from "@/store/ui-slice"
@@ -92,7 +93,7 @@ export function ReadOnlyInfoModalBody({
         </DialogHeader>
         <div className="grid grid-cols-1 gap-x-6 p-5 sm:grid-cols-2">
           <InfoRow label="Timestamp" value={entry.ts} />
-          <InfoRow label="Agent" value={entry.agent} />
+          <InfoRow label="Agent" value={AUDIT_AGENT_DISPLAY_LABEL[entry.agent] ?? entry.agent} />
           <InfoRow label="Action" value={entry.action} />
           <InfoRow label="Supplier" value={entry.supplier ?? "—"} />
           <InfoRow label="Policy" value={entry.policy ?? "—"} />

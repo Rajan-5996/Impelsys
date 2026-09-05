@@ -1,17 +1,25 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
+import { Button } from "@workspace/ui/components/button"
 import {
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@workspace/ui/components/sheet"
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
 
 import { EmptyState } from "@/components/empty-state"
 import { Gauge, MetricBar } from "@/components/metrics"
 import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { humanizeSnake } from "@/lib/format-labels"
-import { fetchRunQualityCheck, selectRunQualityCheck } from "@/store/run-flow-slice"
+import {
+  decideQuality,
+  fetchRunQualityCheck,
+  selectRunQualityCheck,
+} from "@/store/dq-gate-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { fetchActiveRun } from "@/store/run-flow-slice"
+import { pushToast } from "@/store/ui-slice"
+import { Sparkles } from "lucide-react"
 
 const TIER_VARIANT: Record<string, StatusChipVariant> = {
   Preferred: "preferred",
@@ -32,38 +40,52 @@ function dimensionVariant(score: number): StatusChipVariant {
   return "critical"
 }
 
-export function QualityCheckDrawerBody({ runId }: { runId: string }) {
+export function QualityCheckDialogBody({ runId }: { runId: string }) {
   const dispatch = useAppDispatch()
   const quality = useAppSelector(selectRunQualityCheck(runId))
+  const [deciding, setDeciding] = useState(false)
 
   useEffect(() => {
     dispatch(fetchRunQualityCheck(runId))
   }, [dispatch, runId])
 
+  async function handleDecide(approve: boolean) {
+    setDeciding(true)
+    try {
+      await dispatch(decideQuality({ runId, approve, actor: "operator" })).unwrap()
+      dispatch(pushToast(approve ? "Quality check approved -- ETL will proceed." : "Quality check rejected -- run halted.", approve ? "success" : "warn"))
+      dispatch(fetchActiveRun(runId))
+    } catch (error) {
+      dispatch(pushToast(typeof error === "string" ? error : "Failed to submit decision.", "warn"))
+    } finally {
+      setDeciding(false)
+    }
+  }
+
   if (!quality || quality.status === "loading" || quality.status === "idle") {
     return (
-      <SheetContent className="data-[side=right]:sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Quality Check Result</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col gap-3 px-8 pb-16">
+      <DialogContent size="huge">
+        <DialogHeader>
+          <DialogTitle>QA Agent Result</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 p-6">
           <div className="h-24 animate-pulse rounded-md bg-muted/40" />
           <div className="h-40 animate-pulse rounded-md bg-muted/40" />
         </div>
-      </SheetContent>
+      </DialogContent>
     )
   }
 
   if (quality.status === "failed" || !quality.data) {
     return (
-      <SheetContent className="data-[side=right]:sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Quality Check Result</SheetTitle>
-        </SheetHeader>
-        <div className="px-8 pb-16">
+      <DialogContent size="huge">
+        <DialogHeader>
+          <DialogTitle className="flex gap-2"><Sparkles/>Quality Check Result</DialogTitle>
+        </DialogHeader>
+        <div className="p-6">
           <EmptyState message={quality.error ?? "No quality check result available for this run."} />
         </div>
-      </SheetContent>
+      </DialogContent>
     )
   }
 
@@ -72,11 +94,11 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
   const weakDimensions = dimensionEntries.filter(([, score]) => score < 75)
 
   return (
-    <SheetContent className="data-[side=right]:sm:max-w-lg">
-      <SheetHeader>
-        <SheetTitle>Quality Check Result</SheetTitle>
-      </SheetHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-8 pb-16">
+    <DialogContent size="huge">
+      <DialogHeader>
+        <DialogTitle>Quality Check Result</DialogTitle>
+      </DialogHeader>
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col gap-2">
             <span className="text-[11.5px] font-semibold text-foreground">{runId}</span>
@@ -90,6 +112,27 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
           </div>
           <Gauge score={data.overall_score} size={80} />
         </div>
+
+        {data.status === "pending" ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-status-warning/25 bg-status-warning/10 p-3">
+            <p className="text-[11px] text-muted-foreground">
+              This run is paused awaiting your decision on the score below.
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Button size="xs" onClick={() => handleDecide(true)} disabled={deciding}>
+                Approve
+              </Button>
+              <Button
+                size="xs"
+                variant="destructive"
+                onClick={() => handleDecide(false)}
+                disabled={deciding}
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         <p className="text-[10.5px] leading-relaxed text-muted-foreground">
           Runs with an overall score below 75 pause and require human approval before the
@@ -133,6 +176,6 @@ export function QualityCheckDrawerBody({ runId }: { runId: string }) {
           </div>
         ) : null}
       </div>
-    </SheetContent>
+    </DialogContent>
   )
 }

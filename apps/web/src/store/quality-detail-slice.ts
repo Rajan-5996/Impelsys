@@ -58,7 +58,7 @@ export const fetchRealDatasetDetail = createAsyncThunk(
   "qualityDetail/fetchRealDatasetDetail",
   async () => {
     const response = await axiosInstance.get<RealDatasetDetail>(
-      "/api/data-quality/datasets/daily_sales_curated"
+      "/data-quality/datasets/daily_sales_curated"
     )
     return response.data
   }
@@ -68,7 +68,7 @@ export const fetchMockDatasetSummary = createAsyncThunk(
   "qualityDetail/fetchMockDatasetSummary",
   async (datasetId: string) => {
     const response = await axiosInstance.get<MockDatasetSummary>(
-      `/api/data-quality/datasets/${datasetId}`
+      `/data-quality/datasets/${datasetId}`
     )
     return response.data
   }
@@ -78,7 +78,7 @@ export const fetchDatasetRules = createAsyncThunk(
   "qualityDetail/fetchDatasetRules",
   async (datasetId: string) => {
     const response = await axiosInstance.get<{ rules: DatasetRule[]; note?: string }>(
-      `/api/data-quality/datasets/${datasetId}/rules`
+      `/data-quality/datasets/${datasetId}/rules`
     )
     return response.data
   }
@@ -88,7 +88,7 @@ export const fetchDatasetLineage = createAsyncThunk(
   "qualityDetail/fetchDatasetLineage",
   async (datasetId: string) => {
     const response = await axiosInstance.get<{ lineage: string }>(
-      `/api/data-quality/datasets/${datasetId}/lineage`
+      `/data-quality/datasets/${datasetId}/lineage`
     )
     return response.data.lineage
   }
@@ -101,7 +101,7 @@ export const fetchAffectedRecords = createAsyncThunk(
       ruleCode: string
       records: Record<string, unknown>[]
       note?: string
-    }>(`/api/data-quality/affected-records/${ruleCode}`)
+    }>(`/data-quality/affected-records/${ruleCode}`)
     return response.data
   }
 )
@@ -110,7 +110,7 @@ export const fetchFailedRules = createAsyncThunk(
   "qualityDetail/fetchFailedRules",
   async () => {
     const response = await axiosInstance.get<{ failedRules: FailedRule[] }>(
-      "/api/data-quality/failed-rules"
+      "/data-quality/failed-rules"
     )
     return response.data.failedRules
   }

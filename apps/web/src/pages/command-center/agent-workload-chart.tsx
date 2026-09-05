@@ -4,17 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 
 import { DonutMetricChart } from "@/components/charts/donut-metric-chart"
 import { EmptyState } from "@/components/empty-state"
+import { AGENT_ORDER, AGENT_SHORT_LABEL } from "@/lib/agent-labels"
 import { AGENT_CHART_COLORS } from "@/lib/status-bar-colors"
 import { fetchAgents, selectAgents, selectAgentsError, selectAgentsStatus } from "@/store/agents-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-
-const AGENT_SHORT_LABEL: Record<string, string> = {
-  "AGENT-INTAKE": "Source Validation",
-  "AGENT-DQ": "Data Quality",
-  "AGENT-ETL": "ETL Resolution",
-}
-
-const AGENT_ORDER = ["AGENT-INTAKE", "AGENT-DQ", "AGENT-ETL"]
 
 export function AgentWorkloadChart() {
   const dispatch = useAppDispatch()

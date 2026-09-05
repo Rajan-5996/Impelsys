@@ -4,7 +4,7 @@ import { CheckCircle2Icon, ClockIcon, XCircleIcon, type LucideIcon } from "lucid
 
 import { cn } from "@workspace/ui/lib/utils"
 
-import { PieMetricChart } from "@/components/charts/pie-metric-chart"
+import { PieMetricChart, type PieMetricDatum } from "@/components/charts/pie-metric-chart"
 import { EmptyState } from "@/components/empty-state"
 import { ANOMALY_TYPE_LABEL } from "@/lib/anomaly-labels"
 import { CATEGORICAL_CHART_COLORS } from "@/lib/status-bar-colors"
@@ -106,7 +106,13 @@ function StatusTile({
   )
 }
 
-export function AnomalyBreakdown({ anomalies }: { anomalies: Anomaly[] }) {
+export function AnomalyBreakdown({
+  anomalies,
+  vendorBreakdown,
+}: {
+  anomalies: Anomaly[]
+  vendorBreakdown?: PieMetricDatum[]
+}) {
   const dispatch = useAppDispatch()
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { pending: 0, approved: 0, rejected: 0 }
@@ -156,11 +162,21 @@ export function AnomalyBreakdown({ anomalies }: { anomalies: Anomaly[] }) {
           />
         ))}
       </div>
-      <div className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 p-2.5 lg:w-[280px] lg:shrink-0">
-        <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-          By Type
-        </p>
-        <PieMetricChart data={typeBreakdown} size={88} />
+      <div className="flex flex-col gap-3 lg:w-[280px] lg:shrink-0">
+        <div className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 p-2.5">
+          <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+            By Type
+          </p>
+          <PieMetricChart data={typeBreakdown} size={88} />
+        </div>
+        {vendorBreakdown && vendorBreakdown.length > 0 ? (
+          <div className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 p-2.5">
+            <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+              By Vendor
+            </p>
+            <PieMetricChart data={vendorBreakdown} size={88} />
+          </div>
+        ) : null}
       </div>
     </div>
   )

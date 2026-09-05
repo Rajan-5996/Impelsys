@@ -45,7 +45,7 @@ function DialogContent({
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
-  size?: "default" | "wide" | "narrow"
+  size?: "default" | "wide" | "narrow" | "huge"
 }) {
   return (
     <DialogPortal>
@@ -58,6 +58,7 @@ function DialogContent({
             size === "wide" && "max-w-3xl",
             size === "narrow" && "max-w-sm",
             size === "default" && "max-w-xl",
+            size === "huge" && "h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]",
             className
           )}
           {...props}

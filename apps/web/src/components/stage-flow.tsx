@@ -18,17 +18,11 @@ import {
 
 import { cn } from "@workspace/ui/lib/utils"
 
+import { NODE_STYLE } from "@/lib/stage-visual"
+
 export type StageNodeState = "done" | "active" | "in-progress" | "paused" | "failed" | "pending"
 export type StageFlowDirection = "horizontal" | "vertical"
-
-const NODE_STYLE: Record<StageNodeState, string> = {
-  done: "border-status-good bg-status-good/15 text-status-good-ink",
-  active: "border-primary bg-primary/15 text-primary",
-  "in-progress": "border-primary bg-primary/15 text-primary",
-  paused: "border-status-warning bg-status-warning/15 text-status-warning-foreground",
-  failed: "border-status-critical bg-status-critical/15 text-status-critical-ink",
-  pending: "border-border bg-muted/30 text-muted-foreground",
-}
+export type StageNodeSize = "default" | "lg"
 
 const STAGE_ICON: Record<string, LucideIcon> = {
   ingestion: InboxIcon,
@@ -42,12 +36,33 @@ const STAGE_ICON: Record<string, LucideIcon> = {
   persist: SaveIcon,
 }
 
-function NodeIcon({ state, stageKey }: { state: StageNodeState; stageKey: string }) {
-  if (state === "active") return <Loader2Icon className="size-4 animate-spin" />
-  if (state === "paused") return <AlertTriangleIcon className="size-4" />
-  if (state === "failed") return <XIcon className="size-4" />
-  const StageIcon = STAGE_ICON[stageKey] ?? CircleIcon
-  return <StageIcon className="size-4" />
+const ICON_SIZE_CLASS: Record<StageNodeSize, string> = {
+  default: "size-4",
+  lg: "size-6",
+}
+
+const NODE_SIZE_CLASS: Record<StageNodeSize, string> = {
+  default: "size-9",
+  lg: "size-14",
+}
+
+export function NodeIcon({
+  state,
+  stageKey,
+  overrideIcon,
+  size = "default",
+}: {
+  state: StageNodeState
+  stageKey: string
+  overrideIcon?: LucideIcon
+  size?: StageNodeSize
+}) {
+  const iconClass = ICON_SIZE_CLASS[size]
+  if (state === "active") return <Loader2Icon className={cn(iconClass, "animate-spin")} />
+  if (state === "paused") return <AlertTriangleIcon className={iconClass} />
+  if (state === "failed") return <XIcon className={iconClass} />
+  const StageIcon = overrideIcon ?? STAGE_ICON[stageKey] ?? CircleIcon
+  return <StageIcon className={iconClass} />
 }
 
 const FLOW_PARTICLES = [
@@ -183,15 +198,20 @@ function StageNode<T extends string>({
   state,
   clickable,
   onNodeClick,
+  icon,
+  size = "default",
 }: {
   stageKey: T
   index: number
   state: StageNodeState
   clickable: boolean
   onNodeClick?: (stage: T, index: number) => void
+  icon?: LucideIcon
+  size?: StageNodeSize
 }) {
+  const nodeSizeClass = NODE_SIZE_CLASS[size]
   return (
-    <div className="relative flex size-9 shrink-0 items-center justify-center">
+    <div className={cn("relative flex shrink-0 items-center justify-center", nodeSizeClass)}>
       <ActiveNodeSparks show={state === "active"} />
       <ActiveNodePing show={state === "active"} />
       <motion.div
@@ -209,7 +229,8 @@ function StageNode<T extends string>({
             : undefined
         }
         className={cn(
-          "relative flex size-9 items-center justify-center rounded-full border-2",
+          "relative flex items-center justify-center rounded-full border-2",
+          nodeSizeClass,
           NODE_STYLE[state],
           clickable && "cursor-pointer hover:brightness-95"
         )}
@@ -224,7 +245,7 @@ function StageNode<T extends string>({
             }
           : {})}
       >
-        <NodeIcon state={state} stageKey={stageKey} />
+        <NodeIcon state={state} stageKey={stageKey} overrideIcon={icon} size={size} />
       </motion.div>
     </div>
   )
@@ -237,8 +258,11 @@ type StageFlowProps<T extends string> = {
   nodeState: (stage: T, index: number) => StageNodeState
   isNodeClickable?: (stage: T, index: number) => boolean
   onNodeClick?: (stage: T, index: number) => void
+  nodeIcon?: (stage: T, index: number) => LucideIcon | undefined
   direction?: StageFlowDirection
   settled?: boolean
+  showLabels?: boolean
+  size?: StageNodeSize
 }
 
 /** A generic, animated stage-progress row/column -- reused by the smart_etl
@@ -251,8 +275,11 @@ export function StageFlow<T extends string>({
   nodeState,
   isNodeClickable,
   onNodeClick,
+  nodeIcon,
   direction = "horizontal",
   settled = false,
+  showLabels = true,
+  size = "default",
 }: StageFlowProps<T>) {
   const isVertical = direction === "vertical"
 
@@ -271,8 +298,12 @@ export function StageFlow<T extends string>({
                   state={state}
                   clickable={clickable}
                   onNodeClick={onNodeClick}
+                  icon={nodeIcon?.(stageKey, index)}
+                  size={size}
                 />
-                <span className="text-[12px] font-semibold text-foreground">{labels[stageKey]}</span>
+                {showLabels ? (
+                  <span className="text-[12px] font-semibold text-foreground">{labels[stageKey]}</span>
+                ) : null}
               </div>
               {index < stages.length - 1 ? (
                 <div className="flex w-9 flex-1 flex-col items-center">
@@ -298,17 +329,26 @@ export function StageFlow<T extends string>({
         const clickable = isNodeClickable?.(stageKey, index) ?? false
         return (
           <div key={stageKey} className="flex flex-1 items-center last:flex-none">
-            <div className="flex flex-col items-center gap-1.5">
+            <div
+              className={cn(
+                "flex flex-col items-center gap-1.5",
+                size === "lg" && "w-24 shrink-0"
+              )}
+            >
               <StageNode
                 stageKey={stageKey}
                 index={index}
                 state={state}
                 clickable={clickable}
                 onNodeClick={onNodeClick}
+                icon={nodeIcon?.(stageKey, index)}
+                size={size}
               />
-              <span className="w-max max-w-28 text-center text-[9.5px] font-semibold whitespace-nowrap text-muted-foreground">
-                {labels[stageKey]}
-              </span>
+              {showLabels ? (
+                <span className="w-max max-w-28 text-center text-[9.5px] font-semibold whitespace-nowrap text-muted-foreground">
+                  {labels[stageKey]}
+                </span>
+              ) : null}
             </div>
             {index < stages.length - 1 ? (
               <Connector

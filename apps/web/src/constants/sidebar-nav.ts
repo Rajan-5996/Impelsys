@@ -3,13 +3,12 @@ import {
   Briefcase,
   ChartPie,
   FileText,
-  GitBranch,
   Layers,
   LayoutGrid,
   PlugZap,
   Settings,
-  ShieldCheck,
   Siren,
+  UsersRound,
 } from "lucide-react"
 
 import { ROUTES } from "@/constants/routes"
@@ -31,9 +30,8 @@ export const navGroups: NavGroup[] = [
     label: "Operate",
     items: [
       { title: "Dashboard", path: ROUTES.commandCenter, icon: LayoutGrid },
-      { title: "Pipeline Operations", path: ROUTES.pipeline, icon: GitBranch },
+      { title: "Vendor Dashboard", path: ROUTES.pipeline, icon: UsersRound },
       { title: "Connectors", path: ROUTES.connectors, icon: PlugZap },
-      { title: "Data Quality", path: ROUTES.quality, icon: ShieldCheck },
     ],
   },
   {

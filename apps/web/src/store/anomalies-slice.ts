@@ -31,7 +31,7 @@ const initialState: AnomaliesState = {
 }
 
 export const fetchAnomalies = createAsyncThunk("anomalies/fetchAnomalies", async () => {
-  const response = await axiosInstance.get<Anomaly[]>("/api/smart-etl/anomalies")
+  const response = await axiosInstance.get<Anomaly[]>("/smart-etl/anomalies")
   return response.data
 })
 
@@ -47,7 +47,7 @@ export const decideAnomaly = createAsyncThunk(
   async ({ anomalyId, approve, actor, note }: DecideAnomalyPayload, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post<{ run_id: string; status: string }>(
-        `/api/smart-etl/anomalies/${anomalyId}/decide`,
+        `/smart-etl/anomalies/${anomalyId}/decide`,
         { approve, actor, note }
       )
       return response.data

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { WrenchIcon } from "lucide-react"
+import { SparklesIcon, WrenchIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog"
 import { Input } from "@workspace/ui/components/input"
-import { SheetContent, SheetHeader, SheetTitle } from "@workspace/ui/components/sheet"
 
 import { EtlFailureAnalysisContent } from "@/components/overlays/etl-failure-analysis-drawer-body"
 import { retryEtl, selectEtl, uploadEtlScript } from "@/store/etl-slice"
@@ -36,13 +35,13 @@ export function EtlRetryPanel({
     try {
       if (scriptFile) {
         await dispatch(uploadEtlScript({ runId, file: scriptFile })).unwrap()
-        dispatch(pushToast("Script uploaded -- retrying ETL.", "success"))
+        dispatch(pushToast("Script uploaded -- FlowFix Agent is applying it.", "success"))
       }
       const result = await dispatch(retryEtl({ runId, actor: "operator" })).unwrap()
       setScriptFile(null)
       onDecided(result)
     } catch (error) {
-      dispatch(pushToast(typeof error === "string" ? error : "Retry failed.", "warn"))
+      dispatch(pushToast(typeof error === "string" ? error : "Failed to apply the fix.", "warn"))
     }
   }
 
@@ -50,8 +49,8 @@ export function EtlRetryPanel({
     <div className="flex flex-col gap-4">
       <p className="text-xs text-muted-foreground">
         Optionally upload a corrected PySpark script for this run&apos;s failing ETL
-        stage -- it is analyzed automatically before the retry. You can also retry
-        without uploading a script.
+        stage -- it is analyzed automatically before FlowFix Agent applies it. You
+        can also let the agent proceed without uploading a script.
       </p>
       <div className="rounded-lg border border-border bg-card p-2.5">
         <Input
@@ -70,22 +69,22 @@ export function EtlRetryPanel({
         {etlBusy
           ? etl.status === "uploading"
             ? "Uploading..."
-            : "Retrying..."
+            : "Applying Fix..."
           : scriptFile
-            ? "Upload & Retry"
+            ? "Upload & Apply Fix"
             : "Approve Agent"}
       </Button>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent size="narrow">
           <DialogHeader>
-            <DialogTitle>{scriptFile ? "Upload & Retry ETL" : "Approve Agent & Retry ETL"}</DialogTitle>
+            <DialogTitle>{scriptFile ? "Upload & Apply Fix" : "Authorize FlowFix Agent's Fix"}</DialogTitle>
           </DialogHeader>
           <div className="p-5">
             <p className="text-xs text-muted-foreground">
               {scriptFile
-                ? `This uploads "${scriptFile.name}" as the corrected script and immediately retries the ETL stage for this run.`
-                : "This approves the agent's proposed fix as-is and immediately retries the ETL stage for this run."}
+                ? `This uploads "${scriptFile.name}" as the corrected script and immediately resumes the ETL stage for this run.`
+                : "This approves the agent's proposed fix as-is and immediately resumes the ETL stage for this run."}
             </p>
           </div>
           <DialogFooter>
@@ -100,7 +99,7 @@ export function EtlRetryPanel({
   )
 }
 
-export function EtlRetryDrawerBody({ runId }: { runId: string }) {
+export function EtlRetryDialogBody({ runId }: { runId: string }) {
   const dispatch = useAppDispatch()
 
   function handleDecided(result: { run_id: string; status: string }) {
@@ -109,22 +108,25 @@ export function EtlRetryDrawerBody({ runId }: { runId: string }) {
   }
 
   return (
-    <SheetContent className="data-[side=right]:sm:max-w-[50vw]">
-      <SheetHeader>
-        <SheetTitle>ETL Retry Review</SheetTitle>
-      </SheetHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-8 pb-28">
+    <DialogContent size="huge">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <SparklesIcon className="size-4 text-primary" />
+          FlowFix Agent Analysis
+        </DialogTitle>
+      </DialogHeader>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
         <div>
           <EtlFailureAnalysisContent runId={runId} />
         </div>
         <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
           <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-primary uppercase">
             <WrenchIcon className="size-3.5" />
-            Approve or Retry
+            Authorize FlowFix Agent
           </p>
           <EtlRetryPanel runId={runId} onDecided={handleDecided} />
         </div>
       </div>
-    </SheetContent>
+    </DialogContent>
   )
 }

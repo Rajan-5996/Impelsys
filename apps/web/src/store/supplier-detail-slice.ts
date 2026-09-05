@@ -72,7 +72,7 @@ export const fetchSupplierFeeds = createAsyncThunk(
   "supplierDetail/fetchFeeds",
   async (supplierId: string) => {
     const response = await axiosInstance.get<SupplierFeed>(
-      `/api/suppliers/${supplierId}/feeds`
+      `/suppliers/${supplierId}/feeds`
     )
     return response.data
   }
@@ -82,7 +82,7 @@ export const fetchSupplierQuality = createAsyncThunk(
   "supplierDetail/fetchQuality",
   async (supplierId: string) => {
     const response = await axiosInstance.get<SupplierQuality>(
-      `/api/suppliers/${supplierId}/quality`
+      `/suppliers/${supplierId}/quality`
     )
     return response.data
   }
@@ -92,7 +92,7 @@ export const fetchSupplierSla = createAsyncThunk(
   "supplierDetail/fetchSla",
   async (supplierId: string) => {
     const response = await axiosInstance.get<SupplierSla>(
-      `/api/suppliers/${supplierId}/sla`
+      `/suppliers/${supplierId}/sla`
     )
     return response.data
   }
@@ -102,7 +102,7 @@ export const fetchSupplierHistory = createAsyncThunk(
   "supplierDetail/fetchHistory",
   async (supplierId: string) => {
     const response = await axiosInstance.get<SupplierHistory>(
-      `/api/suppliers/${supplierId}/history`
+      `/suppliers/${supplierId}/history`
     )
     return response.data
   }
@@ -112,7 +112,7 @@ export const fetchSupplierContracts = createAsyncThunk(
   "supplierDetail/fetchContracts",
   async (supplierId: string) => {
     const response = await axiosInstance.get<{ policies: SupplierPolicy[] }>(
-      `/api/suppliers/${supplierId}/contracts`
+      `/suppliers/${supplierId}/contracts`
     )
     return response.data.policies
   }

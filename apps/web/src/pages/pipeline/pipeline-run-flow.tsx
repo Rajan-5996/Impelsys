@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
-import { PauseIcon, PlayIcon, XIcon } from "lucide-react"
+import { DatabaseIcon, GitMergeIcon } from "lucide-react"
 
-import { Button } from "@workspace/ui/components/button"
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@workspace/ui/components/dialog"
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
-import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
 import { PipelineParticleField } from "@/components/pipeline-particle-field"
 import { StageFlow } from "@/components/stage-flow"
-import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
-import { runDetailPath } from "@/constants/routes"
-import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
-import { nodeVisualState, STAGE_LABELS, TERMINAL_STATUSES } from "@/lib/stage-visual"
-import type { ActivityFeedEntry } from "@/store/command-center-slice"
+import {
+  DISPLAY_STAGE_LABELS,
+  DISPLAY_STAGE_ORDER,
+  displayActiveIndex,
+  displayStageState,
+  TERMINAL_STATUSES,
+  type DisplayStageKey,
+} from "@/lib/stage-visual"
+import { sourceSystemsForVendor } from "@/lib/vendor-source-labels"
+import { ConnectorsFeed, PipelineOutputBranch } from "@/pages/pipeline/pipeline-flow-endpoints"
+import {
+  PipelineCancelDialog,
+  PipelineFullscreenCanvas,
+  PipelineRunControls,
+  PipelineRunFooter,
+} from "@/pages/pipeline/pipeline-run-flow-overlays"
 import { fetchEtlAttempts, selectEtlAttempts } from "@/store/etl-slice"
-import { fetchPipelineAuditTrail, selectPipelineAuditTrail } from "@/store/pipeline-slice"
 import {
   cancelRun,
   fetchActiveRun,
@@ -32,35 +32,27 @@ import {
   selectRunFlow,
 } from "@/store/run-flow-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { fetchRunFiles, selectRunFiles } from "@/store/runs-slice"
 import { openDrawer, pushToast } from "@/store/ui-slice"
 
-const STATUS_VARIANT: Record<string, StatusChipVariant> = {
-  running: "low",
-  awaiting_anomaly_approval: "medium",
-  awaiting_dq_approval: "medium",
-  awaiting_retry: "medium",
-  completed: "ok",
-  halted: "critical",
-  etl_validation_failed: "critical",
-  failed_max_retries: "critical",
-  failed: "critical",
-  cancelled: "critical",
-  cancel_requested: "medium",
-  paused: "medium",
-  pause_requested: "medium",
-}
-
-export function PipelineRunFlow() {
+export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | null }) {
   const dispatch = useAppDispatch()
+  const sources = sourceVendorId ? sourceSystemsForVendor(sourceVendorId) : []
+  const ingestionIcon = sources.length > 1 ? GitMergeIcon : DatabaseIcon
   const { runId, currentStage, status, message, streaming } = useAppSelector(selectRunFlow)
   const attempts = useAppSelector(selectEtlAttempts(runId ?? ""))
+  const files = useAppSelector(selectRunFiles(runId ?? ""))
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [fullscreenOpen, setFullscreenOpen] = useState(false)
   const [actionBusy, setActionBusy] = useState(false)
   const [pauseRequested, setPauseRequested] = useState(false)
   const isPaused = pauseRequested || status === "paused"
 
   useEffect(() => {
-    if (runId) dispatch(fetchEtlAttempts(runId))
+    if (runId) {
+      dispatch(fetchEtlAttempts(runId))
+      dispatch(fetchRunFiles(runId))
+    }
     setPauseRequested(false)
   }, [dispatch, runId])
 
@@ -107,8 +99,9 @@ export function PipelineRunFlow() {
         <CardHeader className="relative z-10">
           <CardTitle>Smart ETL Run Flow</CardTitle>
         </CardHeader>
-        <CardContent className="relative z-10">
-          <EmptyState message="No run triggered yet -- click Trigger Agent to start one." />
+        <CardContent className="relative z-10 flex flex-col gap-4">
+          <ConnectorsFeed sources={sources} />
+          <EmptyState message="No run triggered yet -- starting the pipeline..." />
         </CardContent>
       </Card>
     )
@@ -119,6 +112,50 @@ export function PipelineRunFlow() {
   const hasFailedEtlAttempt = attempts?.data.some((attempt) => attempt.status === "failed") ?? false
   const qualityCheckReached = activeIndex >= qualityCheckIndex
   const runControlsVisible = !status || !TERMINAL_STATUSES.has(status)
+
+  function isDisplayStageClickable(displayStage: DisplayStageKey) {
+    return (
+      (displayStage === "advisory" && status === "awaiting_advisory_approval") ||
+      (displayStage === "etl" && hasFailedEtlAttempt) ||
+      (displayStage === "quality_check" && qualityCheckReached)
+    )
+  }
+
+  function handleDisplayStageClick(displayStage: DisplayStageKey) {
+    if (displayStage === "advisory" && status === "awaiting_advisory_approval") {
+      dispatch(openDrawer({ type: "etl-advisory", runId: runId! }))
+    } else if (displayStage === "etl" && hasFailedEtlAttempt) {
+      dispatch(openDrawer({ type: "etl-failure-analysis", runId: runId! }))
+    } else if (displayStage === "quality_check" && qualityCheckReached) {
+      dispatch(openDrawer({ type: "quality-check", runId: runId! }))
+    }
+  }
+
+  const outputFiles = files?.data ?? []
+  const hasOutputs = outputFiles.length > 0
+  const displayStages = hasOutputs
+    ? DISPLAY_STAGE_ORDER.filter((stageKey) => stageKey !== "done")
+    : DISPLAY_STAGE_ORDER
+
+  const pipelineDiagram = (
+    <div className="flex flex-col">
+      <ConnectorsFeed sources={sources} />
+      <div className="flex items-center">
+        <StageFlow
+          stages={displayStages}
+          labels={DISPLAY_STAGE_LABELS}
+          size="lg"
+          activeIndex={displayActiveIndex(activeIndex, status)}
+          settled={!!status && TERMINAL_STATUSES.has(status)}
+          nodeState={(stageKey) => displayStageState(stageKey, activeIndex, status, streaming)}
+          nodeIcon={(stageKey) => (stageKey === "ingestion" ? ingestionIcon : undefined)}
+          isNodeClickable={isDisplayStageClickable}
+          onNodeClick={handleDisplayStageClick}
+        />
+        {hasOutputs ? <PipelineOutputBranch runId={runId} files={outputFiles} /> : null}
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -134,141 +171,40 @@ export function PipelineRunFlow() {
             </span>
           ) : null}
         </CardTitle>
-        {runControlsVisible ? (
-          <CardAction className="flex items-center gap-2">
-            <Button variant="outline" size="xs" onClick={handlePauseToggle} disabled={actionBusy}>
-              {isPaused ? <PlayIcon /> : <PauseIcon />}
-              {isPaused ? "Continue" : "Pause"}
-            </Button>
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => setCancelOpen(true)}
-              disabled={actionBusy}
-              className="border-0 text-status-critical-foreground hover:brightness-110"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
-              }}
-            >
-              <XIcon />
-              Cancel
-            </Button>
-          </CardAction>
-        ) : null}
+        <PipelineRunControls
+          isPaused={isPaused}
+          runControlsVisible={runControlsVisible}
+          actionBusy={actionBusy}
+          onPauseToggle={handlePauseToggle}
+          onCancelClick={() => setCancelOpen(true)}
+          onFullscreenClick={() => setFullscreenOpen(true)}
+        />
       </CardHeader>
       <CardContent className="relative z-10 flex flex-col gap-4">
-        <StageFlow
-          stages={STAGE_ORDER}
-          labels={STAGE_LABELS}
-          activeIndex={activeIndex}
-          settled={!!status && TERMINAL_STATUSES.has(status)}
-          nodeState={(stageKey, index) => nodeVisualState(stageKey, index, activeIndex, status, streaming)}
-          isNodeClickable={(stageKey) =>
-            (stageKey === "etl" && hasFailedEtlAttempt) ||
-            (stageKey === "quality_check" && qualityCheckReached)
-          }
-          onNodeClick={(stageKey) => {
-            if (stageKey === "etl" && hasFailedEtlAttempt) {
-              dispatch(openDrawer({ type: "etl-failure-analysis", runId }))
-            } else if (stageKey === "quality_check" && qualityCheckReached) {
-              dispatch(openDrawer({ type: "quality-check", runId }))
-            }
-          }}
-        />
-
-        <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-border pt-3">
-          <Link
-            to={runDetailPath(runId)}
-            className="text-[11px] font-semibold text-status-info underline underline-offset-2 hover:text-status-info/80"
-          >
-            {runId}
-          </Link>
-          {status ? (
-            <StatusChip variant={STATUS_VARIANT[status] ?? "medium"}>
-              {humanizeSnake(status)}
-            </StatusChip>
-          ) : null}
-          <span className="text-[11px] text-muted-foreground">{message}</span>
-          {status === "awaiting_anomaly_approval" ? (
-            <Link
-              to={runDetailPath(runId)}
-              className="ml-auto text-[11px] font-semibold text-primary hover:underline"
-            >
-              Review in Incidents &rarr;
-            </Link>
-          ) : null}
-        </div>
+        {pipelineDiagram}
+        <PipelineRunFooter runId={runId} status={status} message={message} />
       </CardContent>
     </Card>
 
-    <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
-      <DialogContent size="narrow">
-        <DialogHeader>
-          <DialogTitle>Cancel this run?</DialogTitle>
-        </DialogHeader>
-        <div className="p-5">
-          <p className="text-xs text-muted-foreground">
-            This stops the Smart ETL run in progress. Any stage already completed
-            will remain recorded, but the remaining stages will not run.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setCancelOpen(false)} disabled={actionBusy}>
-            Keep Running
-          </Button>
-          <Button
-            onClick={handleCancelConfirm}
-            disabled={actionBusy}
-            className="border-0 text-status-critical-foreground hover:brightness-110"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
-            }}
-          >
-            {actionBusy ? "Cancelling..." : "Cancel Run"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <PipelineCancelDialog
+      open={cancelOpen}
+      onOpenChange={setCancelOpen}
+      onConfirm={handleCancelConfirm}
+      busy={actionBusy}
+    />
+
+    <PipelineFullscreenCanvas
+      open={fullscreenOpen}
+      onOpenChange={setFullscreenOpen}
+      runId={runId}
+      sources={sources}
+      ingestionIcon={ingestionIcon}
+      activeIndex={activeIndex}
+      status={status}
+      streaming={streaming}
+      isDisplayStageClickable={isDisplayStageClickable}
+      handleDisplayStageClick={handleDisplayStageClick}
+    />
     </>
-  )
-}
-
-const AUDIT_COLUMNS: DataTableColumn<ActivityFeedEntry>[] = [
-  { key: "ts", header: "Timestamp", render: (row) => formatTimestamp(row.ts) },
-  { key: "agent", header: "Agent", render: (row) => row.agent },
-  { key: "action", header: "Action", render: (row) => row.action },
-  { key: "decision", header: "Decision", render: (row) => row.decision ?? "—" },
-]
-
-export function PipelineAuditTrail() {
-  const dispatch = useAppDispatch()
-  const auditTrail = useAppSelector(selectPipelineAuditTrail)
-
-  useEffect(() => {
-    dispatch(fetchPipelineAuditTrail("SALES_DAILY_ETL"))
-  }, [dispatch])
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pipeline Audit Trail</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {auditTrail.status === "failed" ? (
-          <EmptyState message={auditTrail.error ?? "Failed to load the audit trail."} />
-        ) : auditTrail.status === "loading" || auditTrail.status === "idle" ? (
-          <div className="h-20 animate-pulse rounded-md bg-muted/40" />
-        ) : (
-          <DataTable
-            columns={AUDIT_COLUMNS}
-            rows={auditTrail.data.entries}
-            rowKey={(row) => `${row.ts}-${row.action}`}
-            emptyMessage="No audit trail entries for this pipeline."
-          />
-        )}
-      </CardContent>
-    </Card>
   )
 }

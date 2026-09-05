@@ -44,7 +44,7 @@ const initialState: AgentsState = {
 }
 
 export const fetchAgents = createAsyncThunk("agents/fetchAgents", async () => {
-  const response = await axiosInstance.get<{ agents: Agent[] }>("/api/agents")
+  const response = await axiosInstance.get<{ agents: Agent[] }>("/agents")
   return response.data.agents
 })
 
@@ -52,7 +52,7 @@ export const fetchAgentActivity = createAsyncThunk(
   "agents/fetchAgentActivity",
   async (agentId: string) => {
     const response = await axiosInstance.get<{ timeline: AgentActivityStep[] }>(
-      `/api/agents/${agentId}/activity`
+      `/agents/${agentId}/activity`
     )
     return { agentId, timeline: response.data.timeline }
   }
@@ -67,7 +67,7 @@ export const setGovernanceMode = createAsyncThunk(
     updatedBy?: string
   }) => {
     const response = await axiosInstance.post(
-      `/api/agents/${payload.agentId}/governance-mode`,
+      `/agents/${payload.agentId}/governance-mode`,
       {
         policy_id: payload.policyId,
         mode: payload.mode,

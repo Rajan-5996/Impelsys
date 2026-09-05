@@ -21,7 +21,7 @@ import { RunFilesList } from "@/components/run-files-list"
 import { StageFlow } from "@/components/stage-flow"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { ROUTES } from "@/constants/routes"
-import { humanizeSnake } from "@/lib/format-labels"
+import { runStatusLabel } from "@/lib/format-labels"
 import { nodeVisualState, STAGE_LABELS, TERMINAL_STATUSES } from "@/lib/stage-visual"
 import { AnomalyDecisionDialog, type PendingDecision } from "@/pages/incidents/anomaly-decision-dialog"
 import { AuditEventCard } from "@/pages/incidents/audit-event-card"
@@ -152,7 +152,7 @@ export function RunDetailPage() {
           <h1 className="text-lg font-semibold text-foreground">{runId}</h1>
           {run ? (
             <StatusChip variant={RUN_STATUS_VARIANT[run.status] ?? "medium"}>
-              {humanizeSnake(run.status)}
+              {runStatusLabel(run.status)}
             </StatusChip>
           ) : null}
         </div>

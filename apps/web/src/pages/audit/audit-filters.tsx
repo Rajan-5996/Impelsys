@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 
+import { AUDIT_AGENT_DISPLAY_LABEL } from "@/lib/agent-labels"
 import { selectAuditFilters, setAuditFilter, type AuditFilters } from "@/store/audit-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 
@@ -31,10 +32,12 @@ function FilterSelect({
   filterKey,
   label,
   options,
+  labelFor = (option) => option,
 }: {
   filterKey: SelectFilterKey
   label: string
   options: string[]
+  labelFor?: (option: string) => string
 }) {
   const dispatch = useAppDispatch()
   const filters = useAppSelector(selectAuditFilters)
@@ -53,7 +56,7 @@ function FilterSelect({
         <SelectItem value="all">All {label}</SelectItem>
         {options.map((option) => (
           <SelectItem key={option} value={option}>
-            {option}
+            {labelFor(option)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -78,7 +81,12 @@ export function AuditFilters() {
           className="border-b-0"
         />
       </div>
-      <FilterSelect filterKey="agent" label="Agents" options={AGENTS} />
+      <FilterSelect
+        filterKey="agent"
+        label="Agents"
+        options={AGENTS}
+        labelFor={(option) => AUDIT_AGENT_DISPLAY_LABEL[option] ?? option}
+      />
       <FilterSelect filterKey="action" label="Actions" options={ACTIONS} />
       <FilterSelect filterKey="mode" label="Modes" options={MODES} />
       <FilterSelect filterKey="env" label="Environments" options={ENVS} />

@@ -56,7 +56,7 @@ export const fetchAuditLog = createAsyncThunk(
   "audit/fetchAuditLog",
   async (query: AuditLogQuery = {}) => {
     const response = await axiosInstance.get<{ total: number; entries: ActivityFeedEntry[] }>(
-      "/api/audit-log",
+      "/audit-log",
       { params: query }
     )
     return response.data

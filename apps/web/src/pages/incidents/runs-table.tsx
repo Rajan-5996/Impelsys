@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 import {
@@ -13,10 +13,11 @@ import {
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
 import { StatusText, type StatusChipVariant } from "@/components/status-chip"
-import { runDetailPath } from "@/constants/routes"
-import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
+import { pipelineVendorDetailPath, runDetailPath } from "@/constants/routes"
+import { formatTimestamp, humanizeSnake, runStatusLabel } from "@/lib/format-labels"
 import { fetchRuns, selectRuns, selectRunsError, selectRunsStatus, type Run } from "@/store/runs-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import type { Vendor } from "@/store/vendors-slice"
 
 const STATUS_VARIANT: Record<string, StatusChipVariant> = {
   running: "low",
@@ -34,27 +35,13 @@ const STATUS_VARIANT: Record<string, StatusChipVariant> = {
   pause_requested: "medium",
 }
 
-const COLUMNS: DataTableColumn<Run>[] = [
-  { key: "run_id", header: "Run ID", render: (row) => row.run_id },
-  {
-    key: "status",
-    header: "Status",
-    render: (row) => (
-      <StatusText variant={STATUS_VARIANT[row.status] ?? "medium"}>
-        {humanizeSnake(row.status)}
-      </StatusText>
-    ),
-  },
-  {
-    key: "current_stage",
-    header: "Current Stage",
-    render: (row) => humanizeSnake(row.current_stage),
-  },
-  { key: "created_at", header: "Created At", render: (row) => formatTimestamp(row.created_at) },
-  { key: "updated_at", header: "Updated At", render: (row) => formatTimestamp(row.updated_at) },
-]
-
-export function RunsTable() {
+export function RunsTable({
+  vendorFilter = "all",
+  vendors = [],
+}: {
+  vendorFilter?: string
+  vendors?: Vendor[]
+}) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const runs = useAppSelector(selectRuns)
@@ -66,8 +53,55 @@ export function RunsTable() {
     dispatch(fetchRuns())
   }, [dispatch])
 
-  const filteredRuns =
-    statusFilter === "all" ? runs : runs.filter((run) => run.status === statusFilter)
+  const vendorNameById = useMemo(
+    () => Object.fromEntries(vendors.map((vendor) => [vendor.vendor_id, vendor.name])),
+    [vendors]
+  )
+
+  const columns: DataTableColumn<Run>[] = useMemo(
+    () => [
+      { key: "run_id", header: "Run ID", render: (row) => row.run_id },
+      {
+        key: "vendor_id",
+        header: "Vendor",
+        render: (row) =>
+          row.vendor_id ? (
+            <Link
+              to={pipelineVendorDetailPath(row.vendor_id)}
+              onClick={(event) => event.stopPropagation()}
+              className="font-semibold text-status-info underline underline-offset-2 hover:text-status-info/80"
+            >
+              {vendorNameById[row.vendor_id] ?? row.vendor_id}
+            </Link>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (row) => (
+          <StatusText variant={STATUS_VARIANT[row.status] ?? "medium"}>
+            {runStatusLabel(row.status)}
+          </StatusText>
+        ),
+      },
+      {
+        key: "current_stage",
+        header: "Current Stage",
+        render: (row) => humanizeSnake(row.current_stage),
+      },
+      { key: "created_at", header: "Created At", render: (row) => formatTimestamp(row.created_at) },
+      { key: "updated_at", header: "Updated At", render: (row) => formatTimestamp(row.updated_at) },
+    ],
+    [vendorNameById]
+  )
+
+  const filteredRuns = runs.filter((run) => {
+    if (statusFilter !== "all" && run.status !== statusFilter) return false
+    if (vendorFilter !== "all" && run.vendor_id !== vendorFilter) return false
+    return true
+  })
 
   return (
     <Card>
@@ -94,7 +128,7 @@ export function RunsTable() {
           <div className="h-64 animate-pulse rounded-md bg-muted/40" />
         ) : (
           <DataTable
-            columns={COLUMNS}
+            columns={columns}
             rows={filteredRuns}
             rowKey={(row) => row.run_id}
             onRowClick={(row) => navigate(runDetailPath(row.run_id))}

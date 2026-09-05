@@ -5,6 +5,16 @@ export function humanizeSnake(value: string) {
     .join(" ")
 }
 
+const RUN_STATUS_DISPLAY_LABEL: Partial<Record<string, string>> = {
+  awaiting_retry: "Fix Pending",
+}
+
+/** Same as humanizeSnake, but rebrands run-status values whose default
+ * "Awaiting Retry" wording we don't want surfaced anywhere in the product. */
+export function runStatusLabel(status: string): string {
+  return RUN_STATUS_DISPLAY_LABEL[status] ?? humanizeSnake(status)
+}
+
 export function humanizePascal(value: string) {
   return value.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
 }

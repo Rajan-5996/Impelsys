@@ -1,66 +1,7 @@
-import { matchPath, useLocation } from "react-router-dom"
 import { motion } from "framer-motion"
-import { CheckIcon } from "lucide-react"
-
-import { cn } from "@workspace/ui/lib/utils"
 
 import { PipelineParticleField } from "@/components/pipeline-particle-field"
-import { LIFECYCLE_STEPS, ROUTE_LIFECYCLE_STEP, ROUTES } from "@/constants/routes"
 import type { LifecycleFlowStep } from "@/store/command-center-slice"
-
-function useCurrentLifecycleStep() {
-  const location = useLocation()
-  const matchedPath = Object.values(ROUTES).find((path) =>
-    matchPath(path, location.pathname)
-  )
-  if (!matchedPath) return null
-  return ROUTE_LIFECYCLE_STEP[matchedPath] ?? null
-}
-
-export function LifecycleStepper() {
-  const currentStep = useCurrentLifecycleStep()
-  if (!currentStep) return null
-
-  const currentIndex = LIFECYCLE_STEPS.indexOf(currentStep)
-
-  return (
-    <div className="flex items-center gap-0 border-b border-border/60 px-5 py-1.5">
-      <span className="mr-3.5 border-r border-border pr-3.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-        Core Journey
-      </span>
-      {LIFECYCLE_STEPS.map((step, index) => {
-        const isDone = index < currentIndex
-        const isActive = index === currentIndex
-        return (
-          <span key={step} className="flex items-center">
-            <span
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 text-[10.5px] font-bold tracking-wide uppercase",
-                isActive && "text-primary",
-                isDone && "text-status-good-ink",
-                !isActive && !isDone && "text-muted-foreground"
-              )}
-            >
-              <span
-                className={cn(
-                  "flex size-4 items-center justify-center rounded-full bg-muted text-[9.5px] font-bold text-muted-foreground",
-                  isActive && "bg-primary text-primary-foreground",
-                  isDone && "bg-status-good text-status-good-foreground"
-                )}
-              >
-                {isDone ? <CheckIcon className="size-2.5" /> : index + 1}
-              </span>
-              {step}
-            </span>
-            {index < LIFECYCLE_STEPS.length - 1 ? (
-              <span className="mx-0.5 text-border">&rarr;</span>
-            ) : null}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
 
 type LifecycleFlowDiagramProps = {
   steps: LifecycleFlowStep[]
@@ -135,7 +76,7 @@ export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
   const positions = steps.map((_, index) => pointOnCircle(-90 + index * angleStep, NODE_RADIUS))
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[300px]">
+    <div className="relative mx-auto aspect-square w-full max-w-[230px]">
       <PipelineParticleField density={30} />
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute inset-0 size-full" aria-hidden>
         <defs>
@@ -188,7 +129,7 @@ export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
         }}
       >
         <p className="text-center text-[11px] font-bold tracking-wide text-white uppercase">
-          Data
+          AI
           <br />
           Lifecycle
         </p>

@@ -9,6 +9,7 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 
 import { EmptyState } from "@/components/empty-state"
+import { AGENT_SHORT_LABEL } from "@/lib/agent-labels"
 import {
   fetchAgentActivity,
   selectAgentActivity,
@@ -33,7 +34,7 @@ export function AgentActivityDrawerBody({ agentId }: { agentId: string }) {
   return (
     <SheetContent className="data-[side=right]:sm:max-w-lg">
       <SheetHeader>
-        <SheetTitle>{agent.name} Activity</SheetTitle>
+        <SheetTitle>{AGENT_SHORT_LABEL[agent.id] ?? agent.name} Activity</SheetTitle>
       </SheetHeader>
       <div className="flex flex-col gap-1 px-8 pb-8">
         <p className="mb-3 text-xs leading-relaxed text-muted-foreground">

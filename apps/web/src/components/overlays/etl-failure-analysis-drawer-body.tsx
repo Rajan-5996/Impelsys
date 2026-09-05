@@ -3,12 +3,15 @@ import { ChevronDownIcon, CheckIcon, CopyIcon, TriangleAlertIcon } from "lucide-
 
 import { Button } from "@workspace/ui/components/button"
 import {
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@workspace/ui/components/sheet"
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
 
+import { ScriptDiff } from "@/components/code-diff"
 import { EmptyState } from "@/components/empty-state"
+import { MarkdownText } from "@/components/markdown-text"
+import { StageFlow } from "@/components/stage-flow"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
 import { formatTimestamp, humanizeSnake } from "@/lib/format-labels"
 import {
@@ -34,6 +37,24 @@ const ATTEMPT_STATUS_VARIANT: Record<string, StatusChipVariant> = {
   success: "ok",
   validation_failed: "medium",
   failed: "critical",
+}
+
+// The ETL engine runs these substages strictly in order (clean -> transform ->
+// enrich -> aggregate_load) and stops at the first failure, so the reported
+// failing_stage alone is enough to derive which ones passed/failed/never ran
+// -- no need to fetch a separate per-substage log for this.
+type EtlSubstage = "clean" | "transform" | "enrich" | "aggregate_load"
+const ETL_SUBSTAGE_ORDER: EtlSubstage[] = ["clean", "transform", "enrich", "aggregate_load"]
+const ETL_SUBSTAGE_LABELS: Record<EtlSubstage, string> = {
+  clean: "Clean",
+  transform: "Transform",
+  enrich: "Enrich",
+  aggregate_load: "Aggregate & Load",
+}
+
+function failingSubstageIndex(failingStage: string | null): number {
+  if (!failingStage) return -1
+  return ETL_SUBSTAGE_ORDER.indexOf(failingStage.replace(/^stage_/, "") as EtlSubstage)
 }
 
 function CodeBlock({ label, code }: { label: string; code: string }) {
@@ -92,6 +113,7 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
 
   const data = analysis.data
   const attempt = attempts?.data.find((item) => item.attempt_id === data.attempt_id)
+  const failIndex = failingSubstageIndex(data.root_cause.failing_stage)
   const hasRootCauseDetail = Boolean(
     data.root_cause.failing_stage ||
       data.root_cause.failing_column ||
@@ -141,9 +163,9 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
         <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-status-warning-foreground" />
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold text-status-warning-foreground">Root Cause</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-status-warning-foreground">
+          <MarkdownText className="mt-1 text-[12px] leading-relaxed text-status-warning-foreground">
             {data.root_cause.summary}
-          </p>
+          </MarkdownText>
           {hasRootCauseDetail ? (
             <button
               type="button"
@@ -157,38 +179,74 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
             </button>
           ) : null}
           {rootCauseExpanded ? (
-            <div className="mt-2 flex flex-col gap-1 border-t border-status-warning/30 pt-2 text-[11px] text-status-warning-foreground">
-              {data.root_cause.failing_stage ? (
-                <p>
-                  <span className="font-semibold">Failing stage:</span> {data.root_cause.failing_stage}
-                </p>
-              ) : null}
-              {data.root_cause.failing_column ? (
-                <p>
-                  <span className="font-semibold">Failing column:</span> {data.root_cause.failing_column}
-                </p>
-              ) : null}
-              {data.root_cause.expected_column ? (
-                <p>
-                  <span className="font-semibold">Expected column:</span> {data.root_cause.expected_column}
-                </p>
-              ) : null}
+            <div className="mt-2 flex flex-col gap-2.5 border-t border-status-warning/30 pt-2.5">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {data.root_cause.failing_stage ? (
+                  <div className="rounded-md border border-status-warning/30 bg-card p-2">
+                    <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      Failing Stage
+                    </p>
+                    <p className="mt-0.5 truncate text-[11.5px] font-semibold text-foreground">
+                      {data.root_cause.failing_stage}
+                    </p>
+                  </div>
+                ) : null}
+                {data.root_cause.failing_column ? (
+                  <div className="rounded-md border border-status-warning/30 bg-card p-2">
+                    <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      Failing Column
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-[11.5px] font-semibold text-status-critical-ink">
+                      {data.root_cause.failing_column}
+                    </p>
+                  </div>
+                ) : null}
+                {data.root_cause.expected_column ? (
+                  <div className="rounded-md border border-status-warning/30 bg-card p-2">
+                    <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      Expected Column
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-[11.5px] font-semibold text-status-good-ink">
+                      {data.root_cause.expected_column}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
               {data.root_cause.investigation_trail ? (
-                <p className="leading-relaxed">
-                  <span className="font-semibold">Investigation trail:</span>{" "}
-                  {data.root_cause.investigation_trail}
-                </p>
+                <div className="rounded-md border border-status-warning/30 bg-card p-2.5">
+                  <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    Investigation Trail
+                  </p>
+                  {failIndex >= 0 ? (
+                    <div className="my-2 overflow-x-auto">
+                      <StageFlow
+                        stages={ETL_SUBSTAGE_ORDER}
+                        labels={ETL_SUBSTAGE_LABELS}
+                        activeIndex={failIndex}
+                        settled
+                        nodeState={(_, index) =>
+                          index < failIndex ? "done" : index === failIndex ? "failed" : "pending"
+                        }
+                      />
+                    </div>
+                  ) : null}
+                  <MarkdownText className="mt-1 text-[11px] leading-relaxed text-foreground">
+                    {data.root_cause.investigation_trail}
+                  </MarkdownText>
+                </div>
               ) : null}
             </div>
           ) : null}
         </div>
       </div>
 
-      {data.error_message ? (
-        <CodeBlock label="Error / Traceback" code={data.error_message} />
-      ) : null}
-
-      {data.corrected_script ? (
+      {data.corrected_script && data.original_script ? (
+        <ScriptDiff
+          before={data.original_script}
+          after={data.corrected_script}
+          reason={data.root_cause.summary}
+        />
+      ) : data.corrected_script ? (
         <CodeBlock label="Corrected Script" code={data.corrected_script} />
       ) : null}
 
@@ -221,15 +279,15 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
   )
 }
 
-export function EtlFailureAnalysisDrawerBody({ runId }: { runId: string }) {
+export function EtlFailureAnalysisDialogBody({ runId }: { runId: string }) {
   return (
-    <SheetContent className="data-[side=right]:sm:max-w-2xl">
-      <SheetHeader>
-        <SheetTitle>ETL Failure Analysis</SheetTitle>
-      </SheetHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-8 pb-28">
+    <DialogContent size="huge">
+      <DialogHeader>
+        <DialogTitle>ETL Failure Analysis</DialogTitle>
+      </DialogHeader>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
         <EtlFailureAnalysisContent runId={runId} />
       </div>
-    </SheetContent>
+    </DialogContent>
   )
 }

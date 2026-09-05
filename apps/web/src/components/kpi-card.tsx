@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import type { ReactNode } from "react"
 import {
   ActivitySquareIcon,
   AlertOctagonIcon,
@@ -129,9 +130,11 @@ type KpiCardProps = {
   kpi: KpiDef
   index?: number
   onClick?: () => void
+  displayLabel?: string
+  visual?: (color: string) => ReactNode
 }
 
-export function KpiCard({ kpi, index = 0, onClick }: KpiCardProps) {
+export function KpiCard({ kpi, index = 0, onClick, displayLabel, visual }: KpiCardProps) {
   const accent = accentFor(kpi)
   const Icon = LABEL_ICON[kpi.label] ?? ActivitySquareIcon
 
@@ -153,7 +156,7 @@ export function KpiCard({ kpi, index = 0, onClick }: KpiCardProps) {
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
         <span className="truncate text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-          {kpi.label}
+          {displayLabel ?? kpi.label}
         </span>
         <span
           className={cn(
@@ -173,11 +176,11 @@ export function KpiCard({ kpi, index = 0, onClick }: KpiCardProps) {
         ) : null}
       </span>
       <span className="truncate text-[11px] text-muted-foreground">{kpi.sub}</span>
-      <Sparkline
-        seed={kpi.label}
-        dir={kpi.delta?.dir ?? "flat"}
-        color={SPARK_COLOR[accent]}
-      />
+      {visual ? (
+        visual(SPARK_COLOR[accent])
+      ) : (
+        <Sparkline seed={kpi.label} dir={kpi.delta?.dir ?? "flat"} color={SPARK_COLOR[accent]} />
+      )}
       {kpi.delta ? (
         <span
           className={cn(

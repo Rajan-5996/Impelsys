@@ -10,6 +10,7 @@ export type Run = {
   current_stage: string
   created_at: string
   updated_at: string
+  vendor_id: string | null
 }
 
 export type RunAuditEntry = {
@@ -47,7 +48,7 @@ const initialState: RunsState = {
 }
 
 export const fetchRuns = createAsyncThunk("runs/fetchRuns", async () => {
-  const response = await axiosInstance.get<Run[]>("/api/smart-etl/runs")
+  const response = await axiosInstance.get<Run[]>("/smart-etl/runs")
   return response.data
 })
 
@@ -55,7 +56,7 @@ export const fetchRunAudit = createAsyncThunk(
   "runs/fetchRunAudit",
   async (runId: string) => {
     const response = await axiosInstance.get<RunAuditEntry[]>(
-      `/api/smart-etl/runs/${runId}/audit`
+      `/smart-etl/runs/${runId}/audit`
     )
     return { runId, entries: response.data }
   }
@@ -65,7 +66,7 @@ export const fetchRunFiles = createAsyncThunk(
   "runs/fetchRunFiles",
   async (runId: string) => {
     const response = await axiosInstance.get<{ run_id: string; files: RunFile[] }>(
-      `/api/smart-etl/runs/${runId}/files`
+      `/smart-etl/runs/${runId}/files`
     )
     return { runId, files: response.data.files }
   }

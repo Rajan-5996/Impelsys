@@ -57,7 +57,7 @@ export const fetchKnowledgeSources = createAsyncThunk(
   "knowledge/fetchKnowledgeSources",
   async () => {
     const response = await axiosInstance.get<{ sources: KnowledgeSource[] }>(
-      "/api/knowledge/sources"
+      "/knowledge/sources"
     )
     return response.data.sources
   }
@@ -67,7 +67,7 @@ export const fetchKbArticles = createAsyncThunk(
   "knowledge/fetchKbArticles",
   async () => {
     const response = await axiosInstance.get<{ articles: KbArticle[] }>(
-      "/api/knowledge/articles"
+      "/knowledge/articles"
     )
     return response.data.articles
   }
@@ -77,7 +77,7 @@ export const fetchKbArticleById = createAsyncThunk(
   "knowledge/fetchKbArticleById",
   async (articleId: string) => {
     const response = await axiosInstance.get<KbArticle>(
-      `/api/knowledge/articles/${articleId}`
+      `/knowledge/articles/${articleId}`
     )
     return response.data
   }
@@ -87,7 +87,7 @@ export const fetchPolicies = createAsyncThunk(
   "knowledge/fetchPolicies",
   async () => {
     const response = await axiosInstance.get<{ policies: Policy[] }>(
-      "/api/knowledge/policies"
+      "/knowledge/policies"
     )
     return response.data.policies
   }
@@ -97,7 +97,7 @@ export const fetchPolicyById = createAsyncThunk(
   "knowledge/fetchPolicyById",
   async (policyId: string) => {
     const response = await axiosInstance.get<Policy>(
-      `/api/knowledge/policies/${policyId}`
+      `/knowledge/policies/${policyId}`
     )
     return response.data
   }

@@ -39,17 +39,17 @@ const initialState: SystemState = {
 }
 
 export const fetchSettings = createAsyncThunk("system/fetchSettings", async () => {
-  const response = await axiosInstance.get<AppSettings>("/api/settings")
+  const response = await axiosInstance.get<AppSettings>("/settings")
   return response.data
 })
 
 export const fetchHealth = createAsyncThunk("system/fetchHealth", async () => {
-  const response = await axiosInstance.get<HealthCheck>("/health")
+  const response = await axiosInstance.get<HealthCheck>("/health", { baseURL: "/" })
   return response.data
 })
 
 export const fetchSystemStatus = createAsyncThunk("system/fetchSystemStatus", async () => {
-  const response = await axiosInstance.get<SystemStatus>("/api/system/status")
+  const response = await axiosInstance.get<SystemStatus>("/system/status")
   return response.data
 })
 
@@ -57,7 +57,7 @@ export const switchEnvironment = createAsyncThunk(
   "system/switchEnvironment",
   async (environment: string) => {
     const response = await axiosInstance.post<{ environment: string }>(
-      "/api/system/environment",
+      "/system/environment",
       { environment }
     )
     return response.data.environment

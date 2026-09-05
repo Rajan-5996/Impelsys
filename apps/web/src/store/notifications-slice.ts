@@ -33,7 +33,7 @@ export const fetchNotifications = createAsyncThunk(
   "notifications/fetchNotifications",
   async () => {
     const response = await axiosInstance.get<{ items: AppNotification[] }>(
-      "/api/notifications"
+      "/notifications"
     )
     return response.data.items
   }

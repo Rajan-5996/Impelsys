@@ -76,7 +76,7 @@ export const fetchSuppliers = createAsyncThunk(
   "suppliers/fetchSuppliers",
   async () => {
     const response = await axiosInstance.get<{ suppliers: Supplier[] }>(
-      "/api/suppliers"
+      "/suppliers"
     )
     return response.data.suppliers
   }
@@ -86,7 +86,7 @@ export const fetchSupplierById = createAsyncThunk(
   "suppliers/fetchSupplierById",
   async (supplierId: string) => {
     const response = await axiosInstance.get<Supplier>(
-      `/api/suppliers/${supplierId}`
+      `/suppliers/${supplierId}`
     )
     return response.data
   }
@@ -95,7 +95,7 @@ export const fetchSupplierById = createAsyncThunk(
 export const fetchSuppliersCsv = createAsyncThunk(
   "suppliers/fetchSuppliersCsv",
   async () => {
-    const response = await axiosInstance.get<string>("/api/suppliers/export/csv", {
+    const response = await axiosInstance.get<string>("/suppliers/export/csv", {
       responseType: "text",
     })
     return response.data
@@ -108,7 +108,7 @@ export const fetchSupplierFilterOptions = createAsyncThunk(
     const response = await axiosInstance.get<{
       regions: string[]
       deliveryMethods: string[]
-    }>("/api/suppliers/filter-options")
+    }>("/suppliers/filter-options")
     return response.data
   }
 )

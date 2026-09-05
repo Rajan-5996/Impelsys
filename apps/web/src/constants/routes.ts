@@ -2,8 +2,8 @@ export const ROUTES = {
   commandCenter: "/",
   supplierDetail: "/suppliers/:supplierId",
   pipeline: "/pipeline",
+  pipelineVendorDetail: "/pipeline/:vendorId",
   connectors: "/connectors",
-  quality: "/quality",
   datasetDetail: "/quality/datasets/:datasetId",
   scorecards: "/scorecards",
   agents: "/agents",
@@ -24,6 +24,10 @@ export function runDetailPath(runId: string) {
   return `/incidents/runs/${runId}`
 }
 
+export function pipelineVendorDetailPath(vendorId: string) {
+  return `/pipeline/${vendorId}`
+}
+
 export function datasetDetailPath(datasetId: string) {
   return `/quality/datasets/${datasetId}`
 }
@@ -33,32 +37,4 @@ export function pathForScreenLink(screen: string, id: string) {
   if (screen === "dataset") return datasetDetailPath(id)
   if (screen === "scorecard") return "/scorecards"
   return "/"
-}
-
-export type LifecycleStep = "Detect" | "Diagnose" | "Resolve" | "Validate" | "Score"
-
-export const LIFECYCLE_STEPS: LifecycleStep[] = [
-  "Detect",
-  "Diagnose",
-  "Resolve",
-  "Validate",
-  "Score",
-]
-
-export const ROUTE_LIFECYCLE_STEP: Record<string, LifecycleStep | null> = {
-  [ROUTES.commandCenter]: null,
-  [ROUTES.supplierDetail]: "Detect",
-  [ROUTES.pipeline]: "Diagnose",
-  [ROUTES.connectors]: null,
-  [ROUTES.quality]: "Validate",
-  [ROUTES.datasetDetail]: "Validate",
-  [ROUTES.scorecards]: "Score",
-  [ROUTES.agents]: null,
-  [ROUTES.knowledge]: null,
-  [ROUTES.audit]: null,
-  [ROUTES.settings]: null,
-  [ROUTES.incidents]: null,
-  [ROUTES.runDetail]: null,
-  [ROUTES.dataAnalystAgent]: null,
-  [ROUTES.metadataLakehouse]: null,
 }

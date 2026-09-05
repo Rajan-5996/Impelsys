@@ -16,6 +16,7 @@ export type DrawerDescriptor =
   | { type: "etl-failure-analysis"; runId: string }
   | { type: "etl-retry"; runId: string }
   | { type: "quality-check"; runId: string }
+  | { type: "etl-advisory"; runId: string }
   | { type: "anomaly-status-list"; status: "pending" | "approved" | "rejected" }
 
 export type ToastVariant = "success" | "info" | "warn"

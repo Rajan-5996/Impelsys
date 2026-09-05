@@ -4,6 +4,7 @@ import { shallowEqual } from "react-redux"
 
 import { Button } from "@workspace/ui/components/button"
 
+import { AUDIT_AGENT_DISPLAY_LABEL } from "@/lib/agent-labels"
 import { AuditFilters } from "@/pages/audit/audit-filters"
 import { AuditTable } from "@/pages/audit/audit-table"
 import { auditQueryFrom, fetchAuditLog, selectAuditEntries } from "@/store/audit-slice"
@@ -25,7 +26,7 @@ function exportAuditCsv(rows: ActivityFeedEntry[]) {
   ]
   const body = rows.map((row) => [
     row.ts,
-    row.agent,
+    AUDIT_AGENT_DISPLAY_LABEL[row.agent] ?? row.agent,
     row.action,
     row.supplier ?? "",
     row.policy ?? "",

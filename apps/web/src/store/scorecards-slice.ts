@@ -47,14 +47,14 @@ const initialState: ScorecardsState = {
 }
 
 export const fetchScorecards = createAsyncThunk("scorecards/fetchScorecards", async () => {
-  const response = await axiosInstance.get<{ scorecards: ScorecardRow[] }>("/api/scorecards")
+  const response = await axiosInstance.get<{ scorecards: ScorecardRow[] }>("/scorecards")
   return response.data.scorecards
 })
 
 export const fetchScorecardById = createAsyncThunk(
   "scorecards/fetchScorecardById",
   async (supplierId: string) => {
-    const response = await axiosInstance.get<ScorecardRow>(`/api/scorecards/${supplierId}`)
+    const response = await axiosInstance.get<ScorecardRow>(`/scorecards/${supplierId}`)
     return response.data
   }
 )
@@ -62,7 +62,7 @@ export const fetchScorecardById = createAsyncThunk(
 export const fetchScorecardWatchlist = createAsyncThunk(
   "scorecards/fetchScorecardWatchlist",
   async () => {
-    const response = await axiosInstance.get<ScorecardWatchlist>("/api/scorecards/watchlist")
+    const response = await axiosInstance.get<ScorecardWatchlist>("/scorecards/watchlist")
     return response.data
   }
 )
@@ -70,7 +70,7 @@ export const fetchScorecardWatchlist = createAsyncThunk(
 export const fetchScorecardsCsv = createAsyncThunk(
   "scorecards/fetchScorecardsCsv",
   async () => {
-    const response = await axiosInstance.get<string>("/api/scorecards/export/csv", {
+    const response = await axiosInstance.get<string>("/scorecards/export/csv", {
       responseType: "text",
     })
     return response.data

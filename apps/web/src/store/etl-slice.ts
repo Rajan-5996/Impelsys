@@ -41,6 +41,7 @@ export type EtlFailureAnalysis = {
   error_message: string | null
   root_cause: EtlRootCause
   corrected_script: string | null
+  original_script: string | null
   confidence: string
   created_at: string
 }
@@ -71,7 +72,7 @@ export const uploadEtlScript = createAsyncThunk(
       const formData = new FormData()
       formData.append("script", file)
       const response = await axiosInstance.post(
-        `/api/smart-etl/runs/${runId}/etl/upload-script`,
+        `/smart-etl/runs/${runId}/etl/upload-script`,
         formData,
         { headers: { "Content-Type": undefined } }
       )
@@ -89,7 +90,7 @@ export const retryEtl = createAsyncThunk(
   async ({ runId, actor }: { runId: string; actor: string }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post<{ run_id: string; status: string }>(
-        `/api/smart-etl/runs/${runId}/etl/retry`,
+        `/smart-etl/runs/${runId}/etl/retry`,
         { actor }
       )
       return response.data
@@ -105,7 +106,7 @@ export const fetchEtlAttempts = createAsyncThunk(
   "etl/fetchEtlAttempts",
   async (runId: string) => {
     const response = await axiosInstance.get<EtlAttempt[]>(
-      `/api/smart-etl/runs/${runId}/etl/attempts`
+      `/smart-etl/runs/${runId}/etl/attempts`
     )
     return { runId, attempts: response.data }
   }
@@ -116,7 +117,7 @@ export const fetchEtlFailureAnalysis = createAsyncThunk(
   async (runId: string, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get<EtlFailureAnalysis>(
-        `/api/smart-etl/runs/${runId}/etl/failure-analysis`
+        `/smart-etl/runs/${runId}/etl/failure-analysis`
       )
       return { runId, analysis: response.data }
     } catch (error) {

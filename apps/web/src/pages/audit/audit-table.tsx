@@ -3,6 +3,7 @@ import { Card } from "@workspace/ui/components/card"
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
 import { Pagination } from "@/components/pagination"
+import { AUDIT_AGENT_DISPLAY_LABEL } from "@/lib/agent-labels"
 import type { ActivityFeedEntry } from "@/store/command-center-slice"
 import {
   selectAuditEntries,
@@ -17,7 +18,11 @@ import { openModal } from "@/store/ui-slice"
 
 const columns: DataTableColumn<ActivityFeedEntry>[] = [
   { key: "ts", header: "Timestamp", render: (row) => row.ts },
-  { key: "agent", header: "Agent", render: (row) => row.agent },
+  {
+    key: "agent",
+    header: "Agent",
+    render: (row) => AUDIT_AGENT_DISPLAY_LABEL[row.agent] ?? row.agent,
+  },
   { key: "action", header: "Action", render: (row) => row.action },
   { key: "supplier", header: "Supplier", render: (row) => row.supplier ?? "—" },
   { key: "mode", header: "Mode", render: (row) => row.mode ?? "—" },

@@ -24,7 +24,7 @@ export const fetchAskSuggestions = createAsyncThunk(
   "ask/fetchAskSuggestions",
   async () => {
     const response = await axiosInstance.get<{ suggestions: string[] }>(
-      "/api/ask/suggestions"
+      "/ask/suggestions"
     )
     return response.data.suggestions
   }
@@ -33,7 +33,7 @@ export const fetchAskSuggestions = createAsyncThunk(
 export const askQuestion = createAsyncThunk(
   "ask/askQuestion",
   async (question: string) => {
-    const response = await axiosInstance.post<AskResponse>("/api/ask", { question })
+    const response = await axiosInstance.post<AskResponse>("/ask", { question })
     return response.data
   }
 )

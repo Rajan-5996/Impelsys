@@ -26,8 +26,8 @@ import { IncidentsPage } from "@/pages/incidents/incidents-page"
 import { RunDetailPage } from "@/pages/incidents/run-detail-page"
 import { KnowledgePoliciesPage } from "@/pages/knowledge/knowledge-policies-page"
 import { PipelineOperationsPage } from "@/pages/pipeline/pipeline-operations-page"
+import { VendorPipelineDetailPage } from "@/pages/pipeline/vendor-pipeline-detail-page"
 import { DatasetDetailPage } from "@/pages/quality/dataset-detail/dataset-detail-page"
-import { DataQualityPage } from "@/pages/quality/data-quality-page"
 import { ScorecardsPage } from "@/pages/scorecards/scorecards-page"
 import { SettingsPage } from "@/pages/settings/settings-page"
 import { SupplierDetailPage } from "@/pages/suppliers/detail/supplier-detail-page"
@@ -80,12 +80,15 @@ export function App() {
                 element={<SupplierDetailPage />}
               />
               <Route path={ROUTES.pipeline} element={<PipelineOperationsPage />} />
+              <Route
+                path={ROUTES.pipelineVendorDetail}
+                element={<VendorPipelineDetailPage />}
+              />
               <Route path={ROUTES.connectors} element={<ConnectorsPage />} />
               <Route path={ROUTES.dataAnalystAgent} element={<DataAnalystAgentPage />} />
               <Route path={ROUTES.metadataLakehouse} element={<MetadataLakehousePage />} />
               <Route path={ROUTES.incidents} element={<IncidentsPage />} />
               <Route path={ROUTES.runDetail} element={<RunDetailPage />} />
-              <Route path={ROUTES.quality} element={<DataQualityPage />} />
               <Route
                 path={ROUTES.datasetDetail}
                 element={<DatasetDetailPage />}

@@ -21,21 +21,6 @@ type RunDetailResponse = {
   current_stage: string
 }
 
-type FetchStatus = "idle" | "loading" | "succeeded" | "failed"
-type Fetchable<T> = { data: T; status: FetchStatus; error: string | null }
-
-export type QualityCheckResult = {
-  dimension_scores: Record<string, number>
-  overall_score: number
-  tier: string
-  issues: string[]
-  status: string
-  decided_by: string | null
-  decision_note: string | null
-  created_at: string
-  decided_at: string | null
-}
-
 type RunFlowState = {
   runId: string | null
   currentStage: StageKey | null
@@ -43,7 +28,6 @@ type RunFlowState = {
   message: string | null
   streaming: boolean
   error: string | null
-  qualityCheck: Record<string, Fetchable<QualityCheckResult | null>>
 }
 
 function extractErrorDetail(error: unknown): string | undefined {
@@ -76,14 +60,13 @@ const initialState: RunFlowState = {
   message: null,
   streaming: false,
   error: null,
-  qualityCheck: {},
 }
 
 export const triggerRunStream = createAsyncThunk(
   "runFlow/triggerRunStream",
   async (args: { onEvent?: (event: RunFlowEvent) => void } | undefined, { dispatch, rejectWithValue }) => {
     try {
-      await streamSsePost(axiosInstance, "/api/smart-etl/runs", {}, (parsed) => {
+      await streamSsePost(axiosInstance, "/smart-etl/runs", {}, (parsed) => {
         dispatch(runEventReceived(parsed as RunFlowEvent))
         args?.onEvent?.(parsed as RunFlowEvent)
       })
@@ -96,7 +79,7 @@ export const triggerRunStream = createAsyncThunk(
 )
 
 export const fetchActiveRun = createAsyncThunk("runFlow/fetchActiveRun", async (runId: string) => {
-  const response = await axiosInstance.get<RunDetailResponse>(`/api/smart-etl/runs/${runId}`)
+  const response = await axiosInstance.get<RunDetailResponse>(`/smart-etl/runs/${runId}`)
   return response.data
 })
 
@@ -107,7 +90,7 @@ export const cancelRun = createAsyncThunk(
   async ({ runId, actor = "operator" }: { runId: string; actor?: string }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post<RunActionResponse>(
-        `/api/smart-etl/runs/${runId}/cancel`,
+        `/smart-etl/runs/${runId}/cancel`,
         { actor }
       )
       return response.data
@@ -122,7 +105,7 @@ export const pauseRun = createAsyncThunk(
   async ({ runId, actor = "operator" }: { runId: string; actor?: string }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post<RunActionResponse>(
-        `/api/smart-etl/runs/${runId}/pause`,
+        `/smart-etl/runs/${runId}/pause`,
         { actor }
       )
       return response.data
@@ -137,30 +120,12 @@ export const resumeRun = createAsyncThunk(
   async ({ runId, actor = "operator" }: { runId: string; actor?: string }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post<RunActionResponse>(
-        `/api/smart-etl/runs/${runId}/resume`,
+        `/smart-etl/runs/${runId}/resume`,
         { actor }
       )
       return response.data
     } catch (error) {
       return rejectWithValue(extractErrorDetail(error) ?? "Failed to resume the run.")
-    }
-  }
-)
-
-export const fetchRunQualityCheck = createAsyncThunk(
-  "runFlow/fetchRunQualityCheck",
-  async (runId: string, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.get<QualityCheckResult>(
-        `/api/smart-etl/runs/${runId}/quality`
-      )
-      return { runId, result: response.data }
-    } catch (error) {
-      const detail = extractErrorDetail(error)
-      return rejectWithValue({
-        runId,
-        detail: detail ?? "No quality check result is available for this run yet.",
-      })
     }
   }
 )
@@ -212,35 +177,9 @@ const runFlowSlice = createSlice({
         state.message = messageForRunStatus(action.payload.status)
         persistRunId(action.payload.run_id)
       })
-      .addCase(fetchRunQualityCheck.pending, (state, action) => {
-        state.qualityCheck[action.meta.arg] = {
-          data: state.qualityCheck[action.meta.arg]?.data ?? null,
-          status: "loading",
-          error: null,
-        }
-      })
-      .addCase(fetchRunQualityCheck.fulfilled, (state, action) => {
-        state.qualityCheck[action.payload.runId] = {
-          data: action.payload.result,
-          status: "succeeded",
-          error: null,
-        }
-      })
-      .addCase(fetchRunQualityCheck.rejected, (state, action) => {
-        const payload = action.payload as { runId: string; detail: string } | undefined
-        const runId = payload?.runId ?? action.meta.arg
-        state.qualityCheck[runId] = {
-          data: null,
-          status: "failed",
-          error: payload?.detail ?? "Failed to load quality check result",
-        }
-      })
   },
 })
 
 export const { runEventReceived } = runFlowSlice.actions
 export const selectRunFlow = (state: RootState) => state.runFlow
-export const selectRunQualityCheck = (runId: string) => (state: RootState) =>
-  state.runFlow.qualityCheck[runId]
-export const selectRunQualityChecks = (state: RootState) => state.runFlow.qualityCheck
 export const runFlowReducer = runFlowSlice.reducer

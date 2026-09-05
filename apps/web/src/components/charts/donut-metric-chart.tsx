@@ -31,6 +31,12 @@ export function DonutMetricChart({
   return (
     <div className="flex items-center gap-4">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-lg font-semibold text-foreground">{total}</span>
+          <span className="text-[8.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+            {centerLabel}
+          </span>
+        </div>
         <ResponsiveContainer width="100%" height="100%" onMouseLeave={resetHover}>
           <PieChart>
             <Pie
@@ -62,12 +68,6 @@ export function DonutMetricChart({
             <Tooltip key={hoverKey} content={<ChartTooltip />} />
           </PieChart>
         </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-semibold text-foreground">{total}</span>
-          <span className="text-[8.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-            {centerLabel}
-          </span>
-        </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {data.map((row) => (

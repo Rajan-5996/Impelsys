@@ -7,7 +7,7 @@ import { store } from "@/store/store"
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
-      <ThemeProvider>
+      <ThemeProvider defaultTheme="light">
         <BrowserRouter>{children}</BrowserRouter>
       </ThemeProvider>
     </Provider>

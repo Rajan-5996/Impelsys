@@ -78,7 +78,7 @@ export const fetchKpis = createAsyncThunk(
   "commandCenter/fetchKpis",
   async () => {
     const response = await axiosInstance.get<{ kpis: KpiDef[] }>(
-      "/api/command-center/kpis"
+      "/command-center/kpis"
     )
     return response.data.kpis
   }
@@ -88,7 +88,7 @@ export const fetchAttentionQueue = createAsyncThunk(
   "commandCenter/fetchAttentionQueue",
   async () => {
     const response = await axiosInstance.get<{ items: AttentionQueueItem[] }>(
-      "/api/command-center/attention-queue"
+      "/command-center/attention-queue"
     )
     return response.data.items
   }
@@ -98,7 +98,7 @@ export const fetchLifecycleFlow = createAsyncThunk(
   "commandCenter/fetchLifecycleFlow",
   async () => {
     const response = await axiosInstance.get<{ stages: LifecycleFlowStep[] }>(
-      "/api/command-center/lifecycle-flow"
+      "/command-center/lifecycle-flow"
     )
     return response.data.stages
   }
