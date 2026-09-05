@@ -11,6 +11,7 @@ import {
   RssIcon,
   ShieldCheckIcon,
   TimerIcon,
+  UserCheckIcon,
   type LucideIcon,
 } from "lucide-react"
 
@@ -104,6 +105,7 @@ const LABEL_ICON: Record<string, LucideIcon> = {
   "Data Feeds Today": RadioTowerIcon,
   "Healthy Feeds": ShieldCheckIcon,
   "Active Anomalies": AlertTriangleIcon,
+  "Open Incidents": UserCheckIcon,
   "Enterprise Data Quality": ActivitySquareIcon,
   "Suppliers Within SLA": TimerIcon,
   Score: AwardIcon,
@@ -155,16 +157,16 @@ export function KpiCard({ kpi, index = 0, onClick, displayLabel, visual }: KpiCa
       )}
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
-        <span className="truncate text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <span className="min-w-0 flex-1 text-[10px] leading-snug font-semibold tracking-wider text-muted-foreground uppercase">
           {displayLabel ?? kpi.label}
         </span>
         <span
           className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-lg border",
+            "flex size-9 shrink-0 items-center justify-center rounded-lg border",
             ICON_BOX[accent]
           )}
         >
-          <Icon aria-hidden className={cn("size-3.5", ICON_COLOR[accent])} />
+          <Icon aria-hidden className={cn("size-5", ICON_COLOR[accent])} />
         </span>
       </div>
       <span className="truncate text-xl font-semibold tracking-tight text-foreground">

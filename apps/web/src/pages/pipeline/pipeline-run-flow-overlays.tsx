@@ -165,7 +165,7 @@ export function PipelineCancelDialog({
   )
 }
 
-/** The Smart ETL Run Flow card's fullscreen popup -- the same pipeline as a
+/** The Agent Execution Pipeline card's fullscreen popup -- the same pipeline as a
  * draggable node canvas. Once the run has actually produced output files,
  * "Done" is dropped from the stage row and the files themselves fan out from
  * the last real stage instead. */
@@ -234,7 +234,7 @@ export function PipelineFullscreenCanvas({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="huge" className="flex flex-col">
         <DialogHeader>
-          <DialogTitle>Smart ETL Run Flow</DialogTitle>
+          <DialogTitle>Agent Execution Pipeline</DialogTitle>
         </DialogHeader>
         <div className="flex flex-1 p-4">
           <PipelineCanvas connectors={canvasConnectors} stages={canvasStages} outputs={canvasOutputs} />

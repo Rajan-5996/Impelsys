@@ -1,7 +1,33 @@
 import { motion } from "framer-motion"
+import {
+  Building2Icon,
+  ClipboardListIcon,
+  LightbulbIcon,
+  MegaphoneIcon,
+  ScanSearchIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  StarIcon,
+  WrenchIcon,
+  type LucideIcon,
+} from "lucide-react"
 
 import { PipelineParticleField } from "@/components/pipeline-particle-field"
 import type { LifecycleFlowStep } from "@/store/command-center-slice"
+
+// Matches the same icon each stage's real counterpart uses elsewhere in the
+// app (e.g. anomaly detection, quality checks) so this diagram stays
+// recognizable rather than inventing a new icon language.
+const STAGE_ICON: Record<string, LucideIcon> = {
+  Vendors: Building2Icon,
+  AnomaliX: ScanSearchIcon,
+  DataGuard: ShieldCheckIcon,
+  FlowFix: WrenchIcon,
+  Advisory: MegaphoneIcon,
+  Scoring: StarIcon,
+  Audit: ClipboardListIcon,
+  Insights: LightbulbIcon,
+}
 
 type LifecycleFlowDiagramProps = {
   steps: LifecycleFlowStep[]
@@ -9,8 +35,9 @@ type LifecycleFlowDiagramProps = {
 
 const SIZE = 100
 const CENTER = SIZE / 2
-const NODE_RADIUS = 40
-const NODE_SIZE_PCT = 18
+const NODE_RADIUS = 34
+const NODE_SIZE_PCT = 15
+const LABEL_RADIUS = NODE_RADIUS + NODE_SIZE_PCT / 2 + 3
 const ARROW_TRIM = NODE_SIZE_PCT / 2 + 1.8
 const ARROW_TRIM_DEG = (ARROW_TRIM / NODE_RADIUS) * (180 / Math.PI)
 
@@ -20,6 +47,18 @@ function pointOnCircle(angleDeg: number, radius: number) {
     x: CENTER + radius * Math.cos(rad),
     y: CENTER + radius * Math.sin(rad),
   }
+}
+
+// Anchors the label's corner closest to its node at the label point, so the
+// text only ever grows outward (away from the node) instead of being
+// centered on a point close enough that half the text overlaps back onto it.
+function labelAnchorTransform(angleDeg: number) {
+  const rad = (angleDeg * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const xPct = cos > 0.3 ? 0 : cos < -0.3 ? -100 : -50
+  const yPct = sin > 0.3 ? 0 : sin < -0.3 ? -100 : -50
+  return `translate(${xPct}%, ${yPct}%)`
 }
 
 function seededUnit(seed: number) {
@@ -73,7 +112,9 @@ function ScatteredParticles({
 
 export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
   const angleStep = 360 / steps.length
-  const positions = steps.map((_, index) => pointOnCircle(-90 + index * angleStep, NODE_RADIUS))
+  const angles = steps.map((_, index) => -90 + index * angleStep)
+  const positions = angles.map((angle) => pointOnCircle(angle, NODE_RADIUS))
+  const labelPositions = angles.map((angle) => pointOnCircle(angle, LABEL_RADIUS))
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[230px]">
@@ -129,13 +170,14 @@ export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
         }}
       >
         <p className="text-center text-[11px] font-bold tracking-wide text-white uppercase">
-          AI
+          Agent
           <br />
           Lifecycle
         </p>
       </div>
       {steps.map((step, index) => {
         const { x, y } = positions[index]!
+        const StepIcon = STAGE_ICON[step.stage] ?? SparklesIcon
         return (
           <div
             key={step.stage}
@@ -150,7 +192,7 @@ export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
           >
             <div
               title={step.stage}
-              className="relative flex size-full flex-col items-center justify-center rounded-full p-1.5 text-center shadow-sm transition-transform duration-200 hover:scale-110"
+              className="relative flex size-full items-center justify-center rounded-full shadow-sm transition-transform duration-200 hover:scale-110"
               style={{
                 backgroundColor: "color-mix(in oklab, var(--color-primary) 10%, var(--color-card))",
                 border: "1px solid color-mix(in oklab, var(--color-primary) 25%, var(--color-border))",
@@ -160,12 +202,21 @@ export function LifecycleFlowDiagram({ steps }: LifecycleFlowDiagramProps) {
                 className="pointer-events-none absolute inset-[4%] rounded-full border"
                 style={{ borderColor: "color-mix(in oklab, var(--color-primary) 30%, var(--color-border))" }}
               />
-              <p className="w-full text-[10px] leading-none font-bold text-foreground">{step.count}</p>
-              <p className="mt-0.5 w-full px-0.5 text-[6.5px] leading-[1.05] font-semibold break-words text-foreground">
-                {step.stage}
-              </p>
+              <StepIcon className="size-[45%] text-primary" />
             </div>
           </div>
+        )
+      })}
+      {steps.map((step, index) => {
+        const { x, y } = labelPositions[index]!
+        return (
+          <span
+            key={`${step.stage}-label`}
+            className="pointer-events-none absolute text-center text-[6.5px] leading-none font-semibold whitespace-nowrap text-foreground"
+            style={{ left: `${x}%`, top: `${y}%`, transform: labelAnchorTransform(angles[index]!) }}
+          >
+            {step.stage}
+          </span>
         )
       })}
     </div>

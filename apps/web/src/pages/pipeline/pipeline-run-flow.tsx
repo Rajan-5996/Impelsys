@@ -95,7 +95,7 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
       <Card className="relative overflow-hidden">
         <PipelineParticleField density={28} />
         <CardHeader className="relative z-10">
-          <CardTitle>Smart ETL Run Flow</CardTitle>
+          <CardTitle>Agent Execution Pipeline</CardTitle>
         </CardHeader>
         <CardContent className="relative z-10 flex flex-col gap-4">
           <ConnectorsFeed sources={sources} />
@@ -158,7 +158,7 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
       <PipelineParticleField active={streaming} density={54} />
       <CardHeader className="relative z-10">
         <CardTitle className="flex items-center gap-2">
-          Smart ETL Run Flow
+          Agent Execution Pipeline
           {streaming ? (
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />

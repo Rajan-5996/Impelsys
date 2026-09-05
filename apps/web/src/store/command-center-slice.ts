@@ -8,6 +8,8 @@ export type KpiDelta = {
   text: string
 }
 
+export type KpiDataSource = "live" | "blended" | "demo"
+
 export type KpiDef = {
   label: string
   value: number | string
@@ -15,6 +17,7 @@ export type KpiDef = {
   sub: string
   delta: KpiDelta | null
   accent?: "up" | "down" | "flat" | "info"
+  dataSource?: KpiDataSource
 }
 
 export type LifecycleFlowStep = {

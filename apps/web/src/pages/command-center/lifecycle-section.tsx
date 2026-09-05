@@ -18,7 +18,7 @@ export function LifecycleSection() {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>AI Lifecycle</CardTitle>
+        <CardTitle>Agent Lifecycle</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col items-center justify-center overflow-hidden">
         {status === "failed" ? (

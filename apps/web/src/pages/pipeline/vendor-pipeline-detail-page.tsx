@@ -94,8 +94,8 @@ export function VendorPipelineDetailPage() {
       {runId ? (
         <>
           <PipelineRunFlow sourceVendorId={vendorId ?? null} />
-          <VendorDataQuality runId={runId} currentStage={currentStage} runStatus={status} />
           <PipelineActionItems runId={runId} runStatus={status} runMessage={message} />
+          <VendorDataQuality runId={runId} currentStage={currentStage} runStatus={status} />
           <RunOutputSection runId={runId} currentStage={currentStage} runStatus={status} />
         </>
       ) : (
