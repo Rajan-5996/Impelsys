@@ -18,19 +18,21 @@ import { EtlFailureAnalysisContent } from "@/components/overlays/etl-failure-ana
 import { EtlRetryPanel } from "@/components/overlays/etl-retry-drawer-body"
 import { PipelineParticleField } from "@/components/pipeline-particle-field"
 import { RunFilesList } from "@/components/run-files-list"
-import { StageFlow } from "@/components/stage-flow"
 import { StatusChip, type StatusChipVariant } from "@/components/status-chip"
-import { ROUTES } from "@/constants/routes"
+import { pipelineVendorDetailPath, ROUTES } from "@/constants/routes"
 import { runStatusLabel } from "@/lib/format-labels"
-import { nodeVisualState, STAGE_LABELS, TERMINAL_STATUSES } from "@/lib/stage-visual"
+import { TERMINAL_STATUSES, type DisplayStageKey } from "@/lib/stage-visual"
+import { sourceSystemsForVendor } from "@/lib/vendor-source-labels"
 import { AnomalyDecisionDialog, type PendingDecision } from "@/pages/incidents/anomaly-decision-dialog"
 import { AuditEventCard } from "@/pages/incidents/audit-event-card"
+import { PipelineFlowRow } from "@/pages/pipeline/pipeline-flow-row"
 import { fetchAnomalies, selectAnomalies } from "@/store/anomalies-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { normalizeStage } from "@/store/run-flow-events"
 import { cancelRun, fetchActiveRun, pauseRun, resumeRun, STAGE_ORDER } from "@/store/run-flow-slice"
-import { fetchRunAudit, fetchRuns, selectRunAudit, selectRuns } from "@/store/runs-slice"
-import { pushToast } from "@/store/ui-slice"
+import { fetchRunAudit, fetchRuns, selectRunAudit, selectRuns, selectRunFiles } from "@/store/runs-slice"
+import { openDrawer, pushToast } from "@/store/ui-slice"
+import { fetchVendors, selectVendors } from "@/store/vendors-slice"
 
 const RUN_STATUS_VARIANT: Record<string, StatusChipVariant> = {
   running: "low",
@@ -48,7 +50,10 @@ export function RunDetailPage() {
   const dispatch = useAppDispatch()
   const audit = useAppSelector(selectRunAudit(runId ?? ""))
   const runs = useAppSelector(selectRuns)
+  const vendors = useAppSelector(selectVendors)
   const anomalies = useAppSelector(selectAnomalies)
+  const files = useAppSelector(selectRunFiles(runId ?? ""))
+  const hasRunFiles = !!files?.data && files.data.length > 0
   const [decision, setDecision] = useState<PendingDecision | null>(null)
   const [anomaliesOpen, setAnomaliesOpen] = useState(true)
   const [retryOpen, setRetryOpen] = useState(true)
@@ -59,6 +64,7 @@ export function RunDetailPage() {
   const [pauseRequested, setPauseRequested] = useState(false)
 
   const run = runs.find((item) => item.run_id === runId)
+  const vendor = vendors.find((item) => item.vendor_id === run?.vendor_id)
   const isPaused = pauseRequested || run?.status === "paused"
   const wasAwaitingAnomalyRef = useRef(false)
 
@@ -76,6 +82,7 @@ export function RunDetailPage() {
     dispatch(fetchRunAudit(runId))
     dispatch(fetchAnomalies())
     dispatch(fetchRuns())
+    dispatch(fetchVendors())
     setPauseRequested(false)
   }, [dispatch, runId])
 
@@ -136,6 +143,25 @@ export function RunDetailPage() {
     if (runId) dispatch(fetchActiveRun(runId))
   }
 
+  function isDisplayStageClickable(displayStage: DisplayStageKey): boolean {
+    if (!run) return false
+    const activeIndex = STAGE_ORDER.indexOf(normalizeStage(run.current_stage))
+    const qualityCheckIndex = STAGE_ORDER.indexOf("quality_check")
+    return (
+      (displayStage === "advisory" && run.status === "awaiting_advisory_approval") ||
+      (displayStage === "quality_check" && activeIndex >= qualityCheckIndex)
+    )
+  }
+
+  function handleDisplayStageClick(displayStage: DisplayStageKey) {
+    if (!run || !runId) return
+    if (displayStage === "advisory" && run.status === "awaiting_advisory_approval") {
+      dispatch(openDrawer({ type: "etl-advisory", runId }))
+    } else if (displayStage === "quality_check" && isDisplayStageClickable(displayStage)) {
+      dispatch(openDrawer({ type: "quality-check", runId }))
+    }
+  }
+
   if (!runId) return null
 
   return (
@@ -156,107 +182,114 @@ export function RunDetailPage() {
             </StatusChip>
           ) : null}
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-4">
-          <CollapsibleCard title="Anomalies" open={anomaliesOpen} onOpenChange={setAnomaliesOpen}>
-            {audit?.status === "failed" ? (
-              <EmptyState message={audit.error ?? "Failed to load anomalies."} />
-            ) : audit?.status === "loading" || !audit || audit.status === "idle" ? (
-              <div className="h-64 animate-pulse rounded-md bg-muted/40" />
-            ) : anomalyEvents.length === 0 ? (
-              <EmptyState message="No anomalies recorded for this run." />
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                {anomalyEvents.map((entry, index) => (
-                  <AuditEventCard
-                    key={`${entry.event}-${entry.created_at}-${index}`}
-                    entry={entry}
-                    anomaly={
-                      typeof entry.details.anomaly_id === "string"
-                        ? anomalyById.get(entry.details.anomaly_id)
-                        : undefined
-                    }
-                    onRequestDecision={(anomalyId, approve) =>
-                      setDecision({ anomalyId, approve })
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </CollapsibleCard>
-
-          {run?.status === "awaiting_retry" ? (
-            <CollapsibleCard title="Agent ETL Approval" open={retryOpen} onOpenChange={setRetryOpen}>
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold text-foreground">
-                    What the Agent Is Planning to Change
-                  </p>
-                  <div className="mt-2">
-                    <EtlFailureAnalysisContent runId={runId} />
-                  </div>
-                </div>
-                <EtlRetryPanel runId={runId} onDecided={handleAdvance} />
-              </div>
-            </CollapsibleCard>
-          ) : null}
-
-          <CollapsibleCard title="Run Files" open={filesOpen} onOpenChange={setFilesOpen}>
-            <RunFilesList runId={runId} />
-          </CollapsibleCard>
-        </div>
-
-        {run ? (
-          <Card className="relative flex h-full flex-col overflow-hidden">
-            <PipelineParticleField density={40} active={run.status === "running"} />
-            <CardHeader className="relative z-10 shrink-0">
-              <CardTitle>Run Flow</CardTitle>
-              {!TERMINAL_STATUSES.has(run.status) ? (
-                <CardAction className="flex items-center gap-2">
-                  <Button variant="outline" size="xs" onClick={handlePauseToggle} disabled={pauseBusy}>
-                    {isPaused ? <PlayIcon /> : <PauseIcon />}
-                    {isPaused ? "Continue" : "Pause"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    onClick={() => setCancelOpen(true)}
-                    disabled={pauseBusy}
-                    className="border-0 text-status-critical-foreground hover:brightness-110"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
-                    }}
-                  >
-                    <XIcon />
-                    Cancel
-                  </Button>
-                </CardAction>
-              ) : null}
-            </CardHeader>
-            <CardContent className="relative z-10 flex-1">
-              <StageFlow
-                direction="vertical"
-                stages={STAGE_ORDER}
-                labels={STAGE_LABELS}
-                activeIndex={STAGE_ORDER.indexOf(normalizeStage(run.current_stage))}
-                settled={TERMINAL_STATUSES.has(run.status)}
-                nodeState={(stageKey, index) =>
-                  nodeVisualState(
-                    stageKey,
-                    index,
-                    STAGE_ORDER.indexOf(normalizeStage(run.current_stage)),
-                    run.status,
-                    run.status === "running"
-                  )
-                }
-              />
-            </CardContent>
-          </Card>
+        {run?.vendor_id ? (
+          <Link
+            to={pipelineVendorDetailPath(run.vendor_id)}
+            className="mt-1 flex w-fit items-center gap-1 text-[11.5px] font-semibold text-status-info underline underline-offset-2 hover:text-status-info/80"
+          >
+            {vendor?.name ?? run.vendor_id}
+          </Link>
         ) : null}
       </div>
+
+      {run ? (
+        <Card className="relative overflow-hidden">
+          <PipelineParticleField density={54} active={run.status === "running"} />
+          <CardHeader className="relative z-10">
+            <CardTitle className="flex items-center gap-2">
+              Agent Execution Pipeline
+              {run.status === "running" ? (
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                </span>
+              ) : null}
+            </CardTitle>
+            {!TERMINAL_STATUSES.has(run.status) ? (
+              <CardAction className="flex items-center gap-2">
+                <Button variant="outline" size="xs" onClick={handlePauseToggle} disabled={pauseBusy}>
+                  {isPaused ? <PlayIcon /> : <PauseIcon />}
+                  {isPaused ? "Continue" : "Pause"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setCancelOpen(true)}
+                  disabled={pauseBusy}
+                  className="border-0 text-status-critical-foreground hover:brightness-110"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
+                  }}
+                >
+                  <XIcon />
+                  Cancel
+                </Button>
+              </CardAction>
+            ) : null}
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <PipelineFlowRow
+              runId={runId}
+              sources={sourceSystemsForVendor(run.vendor_id ?? "")}
+              currentStage={run.current_stage}
+              status={run.status}
+              streaming={run.status === "running"}
+              isDisplayStageClickable={isDisplayStageClickable}
+              onDisplayStageClick={handleDisplayStageClick}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <CollapsibleCard title="Anomaly Agent Review" open={anomaliesOpen} onOpenChange={setAnomaliesOpen}>
+        {audit?.status === "failed" ? (
+          <EmptyState message={audit.error ?? "Failed to load anomalies."} />
+        ) : audit?.status === "loading" || !audit || audit.status === "idle" ? (
+          <div className="h-64 animate-pulse rounded-md bg-muted/40" />
+        ) : anomalyEvents.length === 0 ? (
+          <EmptyState message="No anomalies recorded for this run." />
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {anomalyEvents.map((entry, index) => (
+              <AuditEventCard
+                key={`${entry.event}-${entry.created_at}-${index}`}
+                entry={entry}
+                anomaly={
+                  typeof entry.details.anomaly_id === "string"
+                    ? anomalyById.get(entry.details.anomaly_id)
+                    : undefined
+                }
+                onRequestDecision={(anomalyId, approve) =>
+                  setDecision({ anomalyId, approve })
+                }
+              />
+            ))}
+          </div>
+        )}
+      </CollapsibleCard>
+
+      {run?.status === "awaiting_retry" ? (
+        <CollapsibleCard title="Agent ETL Approval" open={retryOpen} onOpenChange={setRetryOpen}>
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-foreground">
+                What the Agent Is Planning to Change
+              </p>
+              <div className="mt-2">
+                <EtlFailureAnalysisContent runId={runId} />
+              </div>
+            </div>
+            <EtlRetryPanel runId={runId} onDecided={handleAdvance} />
+          </div>
+        </CollapsibleCard>
+      ) : null}
+
+      {hasRunFiles ? (
+        <CollapsibleCard title="Agent Output Files" open={filesOpen} onOpenChange={setFilesOpen}>
+          <RunFilesList runId={runId} />
+        </CollapsibleCard>
+      ) : null}
 
       <AnomalyDecisionDialog
         decision={decision}

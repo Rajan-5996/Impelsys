@@ -1,8 +1,26 @@
+import type { StatusChipVariant } from "@/components/status-chip"
+
 export function humanizeSnake(value: string) {
   return value
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ")
+}
+
+export const RUN_STATUS_VARIANT: Record<string, StatusChipVariant> = {
+  running: "low",
+  awaiting_anomaly_approval: "medium",
+  awaiting_dq_approval: "medium",
+  awaiting_retry: "medium",
+  completed: "ok",
+  halted: "critical",
+  etl_validation_failed: "critical",
+  failed_max_retries: "critical",
+  failed: "critical",
+  cancelled: "critical",
+  cancel_requested: "medium",
+  paused: "medium",
+  pause_requested: "medium",
 }
 
 const RUN_STATUS_DISPLAY_LABEL: Partial<Record<string, string>> = {

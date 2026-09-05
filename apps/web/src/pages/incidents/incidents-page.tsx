@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { SearchIcon } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import { Input } from "@workspace/ui/components/input"
 import {
   Select,
   SelectContent,
@@ -11,16 +13,13 @@ import {
 } from "@workspace/ui/components/select"
 
 import { AnomalyBreakdown } from "@/components/anomaly-breakdown"
-import type { PieMetricDatum } from "@/components/charts/pie-metric-chart"
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
 import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { ROUTES, pipelineVendorDetailPath, runDetailPath } from "@/constants/routes"
 import { ANOMALY_TYPE_LABEL } from "@/lib/anomaly-labels"
-import { formatDetailEntries, formatTimestamp } from "@/lib/format-labels"
-import { CATEGORICAL_CHART_COLORS } from "@/lib/status-bar-colors"
+import { formatDetailEntries, humanizeSnake, RUN_STATUS_VARIANT } from "@/lib/format-labels"
 import { AnomalyActionDialog } from "@/pages/incidents/anomaly-action-dialog"
-import { AnomaliesFilters, type AnomaliesFilterState } from "@/pages/incidents/anomalies-filters"
 import { RunsTable } from "@/pages/incidents/runs-table"
 import type { Anomaly } from "@/store/anomalies-slice"
 import {
@@ -40,6 +39,23 @@ const STATUS_VARIANT: Record<string, StatusChipVariant> = {
   rejected: "critical",
 }
 
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+]
+
+const TYPE_OPTIONS = Object.entries(ANOMALY_TYPE_LABEL).map(([value, label]) => ({
+  value,
+  label,
+}))
+
+type AnomaliesFilterState = {
+  search: string
+  status: string
+  type: string
+}
+
 export function IncidentsPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -50,8 +66,9 @@ export function IncidentsPage() {
   const vendors = useAppSelector(selectVendors)
   const [activeAnomaly, setActiveAnomaly] = useState<Anomaly | null>(null)
   const [vendorFilter, setVendorFilter] = useState("all")
+  const [runStatusFilter, setRunStatusFilter] = useState("all")
   const [filters, setFilters] = useState<AnomaliesFilterState>({
-    runId: "",
+    search: "",
     status: "all",
     type: "all",
   })
@@ -64,6 +81,10 @@ export function IncidentsPage() {
 
   const runVendorId = useMemo(
     () => Object.fromEntries(runs.map((run) => [run.run_id, run.vendor_id])),
+    [runs]
+  )
+  const runStatusByRunId = useMemo(
+    () => Object.fromEntries(runs.map((run) => [run.run_id, run.status])),
     [runs]
   )
   const vendorNameById = useMemo(
@@ -81,31 +102,35 @@ export function IncidentsPage() {
   })
 
   const filteredAnomalies = vendorFilteredAnomalies.filter((anomaly) => {
+    if (runStatusFilter !== "all" && runStatusByRunId[anomaly.run_id] !== runStatusFilter) {
+      return false
+    }
     if (filters.status !== "all" && anomaly.status !== filters.status) return false
     if (filters.type !== "all" && anomaly.anomaly_type !== filters.type) return false
-    if (filters.runId && !anomaly.run_id.toLowerCase().includes(filters.runId.toLowerCase())) {
-      return false
+    if (filters.search) {
+      const needle = filters.search.trim().toLowerCase()
+      const vendorId = runVendorId[anomaly.run_id]
+      const haystack = [
+        anomaly.anomaly_id,
+        anomaly.run_id,
+        (vendorId && vendorNameById[vendorId]) || "",
+        ANOMALY_TYPE_LABEL[anomaly.anomaly_type] ?? anomaly.anomaly_type,
+        anomaly.status,
+        humanizeSnake(runStatusByRunId[anomaly.run_id] ?? ""),
+        formatDetailEntries(anomaly.details),
+        anomaly.decided_by ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+      if (!haystack.includes(needle)) return false
     }
     return true
   })
 
-  const vendorBreakdown = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const anomaly of vendorFilteredAnomalies) {
-      const vendorId = vendorIdForAnomaly(anomaly)
-      if (!vendorId) continue
-      counts.set(vendorId, (counts.get(vendorId) ?? 0) + 1)
-    }
-    return Array.from(counts.entries())
-      .map(([vendorId, count], index): PieMetricDatum => ({
-        key: vendorId,
-        label: vendorNameById[vendorId] ?? vendorId,
-        value: count,
-        color: CATEGORICAL_CHART_COLORS[index % CATEGORICAL_CHART_COLORS.length]!,
-      }))
-      .sort((a, b) => b.value - a.value)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vendorFilteredAnomalies, vendorNameById])
+  const hasAnomalyFilters = filters.status !== "all" || filters.type !== "all"
+  const anomalyRunIds = hasAnomalyFilters
+    ? new Set(filteredAnomalies.map((anomaly) => anomaly.run_id))
+    : null
 
   const columns: DataTableColumn<Anomaly>[] = useMemo(
     () => [
@@ -149,7 +174,6 @@ export function IncidentsPage() {
         ),
       },
       { key: "decided_by", header: "Decided By", render: (row) => row.decided_by ?? "—" },
-      { key: "created_at", header: "Created At", render: (row) => formatTimestamp(row.created_at) },
     ],
     [runVendorId, vendorNameById]
   )
@@ -163,19 +187,127 @@ export function IncidentsPage() {
             Every anomaly detected across all smart ETL runs
           </p>
         </div>
-        <Select value={vendorFilter} onValueChange={(value) => setVendorFilter(value ?? "all")}>
-          <SelectTrigger size="sm">
-            <SelectValue placeholder="Vendor" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Vendors</SelectItem>
-            {vendors.map((vendor) => (
-              <SelectItem key={vendor.vendor_id} value={vendor.vendor_id}>
-                {vendor.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-end gap-3 md:gap-5">
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="anomaly-search"
+              className="text-[10.5px] font-semibold tracking-wide text-muted-foreground"
+            >
+              Search
+            </label>
+            <div className="flex h-8 min-w-[240px] items-center gap-2 border border-border bg-muted/30 px-2.5">
+              <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              <Input
+                id="anomaly-search"
+                value={filters.search}
+                onChange={(event) => setFilters({ ...filters, search: event.target.value })}
+                placeholder="Search anomalies..."
+                className="h-8 border-b-transparent px-0"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10.5px] font-semibold tracking-wide text-muted-foreground">
+              Vendor
+            </label>
+            <Select value={vendorFilter} onValueChange={(value) => setVendorFilter(value ?? "all")}>
+              <SelectTrigger size="sm">
+                <SelectValue>
+                  {(value) =>
+                    value && value !== "all" ? (vendorNameById[value] ?? value) : "All Vendors"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Vendors</SelectItem>
+                {vendors.map((vendor) => (
+                  <SelectItem key={vendor.vendor_id} value={vendor.vendor_id}>
+                    {vendor.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10.5px] font-semibold tracking-wide text-muted-foreground">
+              Run Status
+            </label>
+            <Select
+              value={runStatusFilter}
+              onValueChange={(value) => setRunStatusFilter(value ?? "all")}
+            >
+              <SelectTrigger size="sm">
+                <SelectValue>
+                  {(value) =>
+                    value && value !== "all" ? humanizeSnake(String(value)) : "All Run Statuses"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Run Statuses</SelectItem>
+                {Object.keys(RUN_STATUS_VARIANT).map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {humanizeSnake(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10.5px] font-semibold tracking-wide text-muted-foreground">
+              Status
+            </label>
+            <Select
+              value={filters.status}
+              onValueChange={(value) => setFilters({ ...filters, status: value ?? "all" })}
+            >
+              <SelectTrigger size="sm">
+                <SelectValue>
+                  {(value) =>
+                    value && value !== "all"
+                      ? (STATUS_OPTIONS.find((o) => o.value === value)?.label ?? String(value))
+                      : "All Statuses"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10.5px] font-semibold tracking-wide text-muted-foreground">
+              Type
+            </label>
+            <Select
+              value={filters.type}
+              onValueChange={(value) => setFilters({ ...filters, type: value ?? "all" })}
+            >
+              <SelectTrigger size="sm">
+                <SelectValue>
+                  {(value) =>
+                    value && value !== "all"
+                      ? (ANOMALY_TYPE_LABEL[String(value)] ?? String(value))
+                      : "All Types"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {status === "failed" ? (
@@ -189,17 +321,22 @@ export function IncidentsPage() {
               <CardTitle>Anomaly Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <AnomalyBreakdown anomalies={vendorFilteredAnomalies} vendorBreakdown={vendorBreakdown} />
+              <AnomalyBreakdown anomalies={filteredAnomalies} />
             </CardContent>
           </Card>
 
-          <RunsTable vendorFilter={vendorFilter} vendors={vendors} />
+          <RunsTable
+            vendorFilter={vendorFilter}
+            statusFilter={runStatusFilter}
+            vendors={vendors}
+            search={filters.search}
+            anomalyRunIds={anomalyRunIds}
+          />
 
           <Card>
             <CardHeader>
               <CardTitle>Anomalies</CardTitle>
             </CardHeader>
-            <AnomaliesFilters filters={filters} onChange={setFilters} />
             <CardContent className="p-0">
               <DataTable
                 columns={columns}

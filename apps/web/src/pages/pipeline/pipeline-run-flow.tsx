@@ -4,17 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 
 import { EmptyState } from "@/components/empty-state"
 import { PipelineParticleField } from "@/components/pipeline-particle-field"
-import { StageFlow } from "@/components/stage-flow"
-import {
-  DISPLAY_STAGE_LABELS,
-  DISPLAY_STAGE_ORDER,
-  displayActiveIndex,
-  displayStageState,
-  TERMINAL_STATUSES,
-  type DisplayStageKey,
-} from "@/lib/stage-visual"
+import { TERMINAL_STATUSES, type DisplayStageKey } from "@/lib/stage-visual"
 import { sourceSystemsForVendor } from "@/lib/vendor-source-labels"
-import { ConnectorsFeed, PipelineOutputBranch } from "@/pages/pipeline/pipeline-flow-endpoints"
+import { ConnectorsFeed } from "@/pages/pipeline/pipeline-flow-endpoints"
+import { PipelineFlowRow } from "@/pages/pipeline/pipeline-flow-row"
 import {
   PipelineCancelDialog,
   PipelineFullscreenCanvas,
@@ -31,7 +24,6 @@ import {
   selectRunFlow,
 } from "@/store/run-flow-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchRunFiles, selectRunFiles } from "@/store/runs-slice"
 import { openDrawer, pushToast } from "@/store/ui-slice"
 
 export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | null }) {
@@ -39,7 +31,6 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
   const sources = sourceVendorId ? sourceSystemsForVendor(sourceVendorId) : []
   const { runId, currentStage, status, message, streaming } = useAppSelector(selectRunFlow)
   const attempts = useAppSelector(selectEtlAttempts(runId ?? ""))
-  const files = useAppSelector(selectRunFiles(runId ?? ""))
   const [cancelOpen, setCancelOpen] = useState(false)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
   const [actionBusy, setActionBusy] = useState(false)
@@ -49,7 +40,6 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
   useEffect(() => {
     if (runId) {
       dispatch(fetchEtlAttempts(runId))
-      dispatch(fetchRunFiles(runId))
     }
     setPauseRequested(false)
   }, [dispatch, runId])
@@ -129,27 +119,16 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
     }
   }
 
-  const outputFiles = files?.data ?? []
-  const hasOutputs = outputFiles.length > 0
-  const displayStages = hasOutputs
-    ? DISPLAY_STAGE_ORDER.filter((stageKey) => stageKey !== "done")
-    : DISPLAY_STAGE_ORDER
-
   const pipelineDiagram = (
-    <div className="flex items-center overflow-x-auto pb-6">
-      <ConnectorsFeed sources={sources} />
-      <StageFlow
-        stages={displayStages}
-        labels={DISPLAY_STAGE_LABELS}
-        size="lg"
-        activeIndex={displayActiveIndex(activeIndex, status)}
-        settled={!!status && TERMINAL_STATUSES.has(status)}
-        nodeState={(stageKey) => displayStageState(stageKey, activeIndex, status, streaming)}
-        isNodeClickable={isDisplayStageClickable}
-        onNodeClick={handleDisplayStageClick}
-      />
-      {hasOutputs ? <PipelineOutputBranch runId={runId} files={outputFiles} /> : null}
-    </div>
+    <PipelineFlowRow
+      runId={runId}
+      sources={sources}
+      currentStage={currentStage}
+      status={status}
+      streaming={streaming}
+      isDisplayStageClickable={isDisplayStageClickable}
+      onDisplayStageClick={handleDisplayStageClick}
+    />
   )
 
   return (

@@ -1,53 +1,35 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/select"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table"
 import { EmptyState } from "@/components/empty-state"
-import { StatusText, type StatusChipVariant } from "@/components/status-chip"
+import { StatusText } from "@/components/status-chip"
 import { pipelineVendorDetailPath, runDetailPath } from "@/constants/routes"
-import { formatTimestamp, humanizeSnake, runStatusLabel } from "@/lib/format-labels"
+import { humanizeSnake, runStatusLabel, RUN_STATUS_VARIANT } from "@/lib/format-labels"
 import { fetchRuns, selectRuns, selectRunsError, selectRunsStatus, type Run } from "@/store/runs-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import type { Vendor } from "@/store/vendors-slice"
 
-const STATUS_VARIANT: Record<string, StatusChipVariant> = {
-  running: "low",
-  awaiting_anomaly_approval: "medium",
-  awaiting_dq_approval: "medium",
-  awaiting_retry: "medium",
-  completed: "ok",
-  halted: "critical",
-  etl_validation_failed: "critical",
-  failed_max_retries: "critical",
-  failed: "critical",
-  cancelled: "critical",
-  cancel_requested: "medium",
-  paused: "medium",
-  pause_requested: "medium",
-}
-
 export function RunsTable({
   vendorFilter = "all",
+  statusFilter = "all",
   vendors = [],
+  search = "",
+  anomalyRunIds = null,
 }: {
   vendorFilter?: string
+  statusFilter?: string
   vendors?: Vendor[]
+  search?: string
+  anomalyRunIds?: Set<string> | null
 }) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const runs = useAppSelector(selectRuns)
   const status = useAppSelector(selectRunsStatus)
   const error = useAppSelector(selectRunsError)
-  const [statusFilter, setStatusFilter] = useState("all")
 
   useEffect(() => {
     dispatch(fetchRuns())
@@ -81,7 +63,7 @@ export function RunsTable({
         key: "status",
         header: "Status",
         render: (row) => (
-          <StatusText variant={STATUS_VARIANT[row.status] ?? "medium"}>
+          <StatusText variant={RUN_STATUS_VARIANT[row.status] ?? "medium"}>
             {runStatusLabel(row.status)}
           </StatusText>
         ),
@@ -91,8 +73,6 @@ export function RunsTable({
         header: "Current Stage",
         render: (row) => humanizeSnake(row.current_stage),
       },
-      { key: "created_at", header: "Created At", render: (row) => formatTimestamp(row.created_at) },
-      { key: "updated_at", header: "Updated At", render: (row) => formatTimestamp(row.updated_at) },
     ],
     [vendorNameById]
   )
@@ -100,6 +80,20 @@ export function RunsTable({
   const filteredRuns = runs.filter((run) => {
     if (statusFilter !== "all" && run.status !== statusFilter) return false
     if (vendorFilter !== "all" && run.vendor_id !== vendorFilter) return false
+    if (anomalyRunIds && !anomalyRunIds.has(run.run_id)) return false
+    if (search) {
+      const needle = search.trim().toLowerCase()
+      const haystack = [
+        run.run_id,
+        (run.vendor_id && vendorNameById[run.vendor_id]) || "",
+        runStatusLabel(run.status),
+        humanizeSnake(run.current_stage),
+        run.source_file,
+      ]
+        .join(" ")
+        .toLowerCase()
+      if (!haystack.includes(needle)) return false
+    }
     return true
   })
 
@@ -107,19 +101,6 @@ export function RunsTable({
     <Card>
       <CardHeader>
         <CardTitle>Pipeline Runs</CardTitle>
-        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value ?? "all")}>
-          <SelectTrigger size="sm">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {Object.keys(STATUS_VARIANT).map((value) => (
-              <SelectItem key={value} value={value}>
-                {humanizeSnake(value)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </CardHeader>
       <CardContent className="p-0">
         {status === "failed" ? (

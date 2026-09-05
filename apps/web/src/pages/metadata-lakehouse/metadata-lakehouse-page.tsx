@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import {
-  Building2Icon, CheckCircle2Icon, CheckIcon, ChevronDownIcon, DatabaseIcon,
+  Building2Icon, CheckIcon, ChevronDownIcon, DatabaseIcon,
   Loader2Icon, PlayIcon, RotateCcwIcon, ShieldAlertIcon, WorkflowIcon, XCircleIcon,
 } from "lucide-react"
 
