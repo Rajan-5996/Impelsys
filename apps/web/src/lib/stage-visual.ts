@@ -18,6 +18,18 @@ export const NODE_STYLE: Record<StageNodeState, string> = {
   pending: "border-border bg-muted/30 text-muted-foreground",
 }
 
+// Solid-fill counterpart of NODE_STYLE -- used where nodes need to read as
+// fully opaque (e.g. the draggable fullscreen canvas) instead of the soft
+// translucent fills used in the inline run-flow row.
+export const NODE_STYLE_SOLID: Record<StageNodeState, string> = {
+  done: "border-status-good bg-status-good text-status-good-foreground",
+  active: "border-primary bg-primary text-primary-foreground",
+  "in-progress": "border-primary bg-primary text-primary-foreground",
+  paused: "border-status-warning bg-status-warning text-status-warning-foreground",
+  failed: "border-status-critical bg-status-critical text-status-critical-foreground",
+  pending: "border-border bg-muted text-muted-foreground",
+}
+
 export const FAILED_STATUSES = new Set([
   "halted",
   "etl_validation_failed",
@@ -62,14 +74,20 @@ export function nodeVisualState(
 // with its own state derived from the run status instead of current_stage.
 export type DisplayStageKey = StageKey | "advisory"
 
+// "ingestion" is a real current_stage value but is never shown as its own
+// node -- connectors feed straight into the anomaly-detection node instead.
 export const DISPLAY_STAGE_ORDER: DisplayStageKey[] = [
-  "ingestion",
   "anomaly_detection",
   "quality_check",
   "advisory",
   "etl",
   "done",
 ]
+
+// Minimum horizontal gap (px) between every node in the run-flow row --
+// connector fan-in, inter-stage connectors, and the output fan-out all grow
+// equally to fill the row's full width, never shrinking below this floor.
+export const FLOW_GAP_WIDTH = 72
 
 export const DISPLAY_STAGE_LABELS: Record<DisplayStageKey, string> = {
   ...STAGE_LABELS,

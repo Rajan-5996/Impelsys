@@ -218,7 +218,7 @@ export function EtlFailureAnalysisContent({ runId }: { runId: string }) {
                     Investigation Trail
                   </p>
                   {failIndex >= 0 ? (
-                    <div className="my-2 overflow-x-auto">
+                    <div className="my-10 p-5 overflow-x-auto">
                       <StageFlow
                         stages={ETL_SUBSTAGE_ORDER}
                         labels={ETL_SUBSTAGE_LABELS}

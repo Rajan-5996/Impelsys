@@ -64,14 +64,20 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
     )
   }
 
-  if (advisory.status === "failed" || !advisory.data) {
+  if (advisory.status === "failed" || !advisory.data || !advisory.data.exists) {
     return (
       <DialogContent size="huge">
         <DialogHeader>
           <DialogTitle>Stage 4 Advisory Review</DialogTitle>
         </DialogHeader>
         <div className="p-6">
-          <EmptyState message={advisory.error ?? "No advisory review available for this run."} />
+          <EmptyState
+            message={
+              advisory.status === "failed"
+                ? (advisory.error ?? "Failed to load advisory review for this run.")
+                : "The advisory agent found nothing to flag for this run -- no review needed."
+            }
+          />
         </div>
       </DialogContent>
     )

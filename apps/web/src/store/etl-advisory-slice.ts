@@ -3,15 +3,19 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { axiosInstance } from "@/lib/axios-instance"
 import type { RootState } from "@/store/store"
 
-export type EtlAdvisory = {
-  attempt_number: number
-  warnings: string[]
-  status: string
-  decided_by: string | null
-  decision_note: string | null
-  created_at: string
-  decided_at: string | null
-}
+export type EtlAdvisory =
+  | { exists: false; run_id: string }
+  | {
+      exists: true
+      run_id: string
+      attempt_number: number
+      warnings: string[]
+      status: string
+      decided_by: string | null
+      decision_note: string | null
+      created_at: string
+      decided_at: string | null
+    }
 
 type FetchStatus = "idle" | "loading" | "succeeded" | "failed"
 type Fetchable<T> = { data: T; status: FetchStatus; error: string | null }
@@ -38,10 +42,9 @@ export const fetchEtlAdvisory = createAsyncThunk(
       const response = await axiosInstance.get<EtlAdvisory>(`/smart-etl/runs/${runId}/etl/advisory`)
       return { runId, result: response.data }
     } catch (error) {
-      const detail = extractErrorDetail(error)
       return rejectWithValue({
         runId,
-        detail: detail ?? "No advisory review is available for this run yet.",
+        detail: extractErrorDetail(error) ?? "Failed to load advisory review for this run.",
       })
     }
   }

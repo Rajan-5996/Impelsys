@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { DatabaseIcon, GitMergeIcon } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
@@ -38,7 +37,6 @@ import { openDrawer, pushToast } from "@/store/ui-slice"
 export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | null }) {
   const dispatch = useAppDispatch()
   const sources = sourceVendorId ? sourceSystemsForVendor(sourceVendorId) : []
-  const ingestionIcon = sources.length > 1 ? GitMergeIcon : DatabaseIcon
   const { runId, currentStage, status, message, streaming } = useAppSelector(selectRunFlow)
   const attempts = useAppSelector(selectEtlAttempts(runId ?? ""))
   const files = useAppSelector(selectRunFiles(runId ?? ""))
@@ -138,22 +136,19 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
     : DISPLAY_STAGE_ORDER
 
   const pipelineDiagram = (
-    <div className="flex flex-col">
+    <div className="flex items-center overflow-x-auto pb-6">
       <ConnectorsFeed sources={sources} />
-      <div className="flex items-center">
-        <StageFlow
-          stages={displayStages}
-          labels={DISPLAY_STAGE_LABELS}
-          size="lg"
-          activeIndex={displayActiveIndex(activeIndex, status)}
-          settled={!!status && TERMINAL_STATUSES.has(status)}
-          nodeState={(stageKey) => displayStageState(stageKey, activeIndex, status, streaming)}
-          nodeIcon={(stageKey) => (stageKey === "ingestion" ? ingestionIcon : undefined)}
-          isNodeClickable={isDisplayStageClickable}
-          onNodeClick={handleDisplayStageClick}
-        />
-        {hasOutputs ? <PipelineOutputBranch runId={runId} files={outputFiles} /> : null}
-      </div>
+      <StageFlow
+        stages={displayStages}
+        labels={DISPLAY_STAGE_LABELS}
+        size="lg"
+        activeIndex={displayActiveIndex(activeIndex, status)}
+        settled={!!status && TERMINAL_STATUSES.has(status)}
+        nodeState={(stageKey) => displayStageState(stageKey, activeIndex, status, streaming)}
+        isNodeClickable={isDisplayStageClickable}
+        onNodeClick={handleDisplayStageClick}
+      />
+      {hasOutputs ? <PipelineOutputBranch runId={runId} files={outputFiles} /> : null}
     </div>
   )
 
@@ -198,7 +193,6 @@ export function PipelineRunFlow({ sourceVendorId }: { sourceVendorId?: string | 
       onOpenChange={setFullscreenOpen}
       runId={runId}
       sources={sources}
-      ingestionIcon={ingestionIcon}
       activeIndex={activeIndex}
       status={status}
       streaming={streaming}

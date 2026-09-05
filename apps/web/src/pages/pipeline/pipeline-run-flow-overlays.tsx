@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Link } from "react-router-dom"
-import { FileIcon, Maximize2Icon, PauseIcon, PlayIcon, type LucideIcon, XIcon } from "lucide-react"
+import { FileIcon, Maximize2Icon, PauseIcon, PlayIcon, XIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { CardAction } from "@workspace/ui/components/card"
@@ -174,7 +174,6 @@ export function PipelineFullscreenCanvas({
   onOpenChange,
   runId,
   sources,
-  ingestionIcon,
   activeIndex,
   status,
   streaming,
@@ -185,7 +184,6 @@ export function PipelineFullscreenCanvas({
   onOpenChange: (open: boolean) => void
   runId: string
   sources: VendorSourceSystem[]
-  ingestionIcon: LucideIcon
   activeIndex: number
   status: string | null
   streaming: boolean
@@ -224,7 +222,6 @@ export function PipelineFullscreenCanvas({
       id: stageKey,
       kind: "stage",
       label: DISPLAY_STAGE_LABELS[stageKey],
-      icon: stageKey === "ingestion" ? ingestionIcon : undefined,
       state: displayStageState(stageKey, activeIndex, status, streaming),
       clickable,
       onClick: () => {

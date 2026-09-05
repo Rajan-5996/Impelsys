@@ -10,6 +10,7 @@ import { etlReducer } from "@/store/etl-slice"
 import { etlAdvisoryReducer } from "@/store/etl-advisory-slice"
 import { githubConnectorReducer } from "@/store/github-connector-slice"
 import { knowledgeReducer } from "@/store/knowledge-slice"
+import { metadataLakehouseReducer } from "@/store/metadata-lakehouse-slice"
 import { notificationsReducer } from "@/store/notifications-slice"
 import { qaAgentReducer } from "@/store/qa-agent-slice"
 import { qaHistoryReducer } from "@/store/qa-history-slice"
@@ -43,6 +44,7 @@ export const store = configureStore({
     scorecards: scorecardsReducer,
     search: searchReducer,
     knowledge: knowledgeReducer,
+    metadataLakehouse: metadataLakehouseReducer,
     notifications: notificationsReducer,
     system: systemReducer,
     audit: auditReducer,

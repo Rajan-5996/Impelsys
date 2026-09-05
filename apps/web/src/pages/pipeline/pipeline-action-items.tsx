@@ -154,7 +154,7 @@ export function PipelineActionItems({
                 </Button>
               </div>
             ) : null}
-            {awaitingRetry && advisory?.data ? (
+            {awaitingRetry && advisory?.data?.exists ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">

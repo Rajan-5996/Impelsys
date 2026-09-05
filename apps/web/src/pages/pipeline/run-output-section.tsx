@@ -4,7 +4,7 @@ import { Loader2Icon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
 import { RunFilesList } from "@/components/run-files-list"
-import { TERMINAL_STATUSES } from "@/lib/stage-visual"
+import { PAUSED_STATUSES, TERMINAL_STATUSES } from "@/lib/stage-visual"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { STAGE_ORDER, type StageKey } from "@/store/run-flow-slice"
 import { fetchRunFiles, selectRunFiles } from "@/store/runs-slice"
@@ -37,7 +37,9 @@ export function RunOutputSection({
 
   const etlIndex = STAGE_ORDER.indexOf("etl")
   const currentIndex = STAGE_ORDER.indexOf(currentStage ?? "ingestion")
-  const closeToOutput = currentIndex >= etlIndex
+  const failedTerminal = !!runStatus && TERMINAL_STATUSES.has(runStatus) && runStatus !== "completed"
+  const isBlocked = !!runStatus && (PAUSED_STATUSES.has(runStatus) || failedTerminal)
+  const closeToOutput = currentIndex >= etlIndex && !isBlocked
 
   if (!hasFiles && !closeToOutput) return null
 

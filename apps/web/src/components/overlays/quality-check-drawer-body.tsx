@@ -96,7 +96,7 @@ export function QualityCheckDialogBody({ runId }: { runId: string }) {
   return (
     <DialogContent size="huge">
       <DialogHeader>
-        <DialogTitle>Quality Check Result</DialogTitle>
+        <DialogTitle className="flex gap-2"><Sparkles />QA Agent Result</DialogTitle>
       </DialogHeader>
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
         <div className="flex items-center justify-between gap-3">

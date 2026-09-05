@@ -18,7 +18,7 @@ import {
 
 import { cn } from "@workspace/ui/lib/utils"
 
-import { NODE_STYLE } from "@/lib/stage-visual"
+import { FLOW_GAP_WIDTH, NODE_STYLE } from "@/lib/stage-visual"
 
 export type StageNodeState = "done" | "active" | "in-progress" | "paused" | "failed" | "pending"
 export type StageFlowDirection = "horizontal" | "vertical"
@@ -81,22 +81,28 @@ function Connector({
   flowing,
   settled,
   direction = "horizontal",
+  size = "default",
 }: {
   lit: boolean
   flowing: boolean
   settled?: boolean
   direction?: StageFlowDirection
+  size?: StageNodeSize
 }) {
   const isVertical = direction === "vertical"
+  const growingGap = !isVertical && size === "lg"
   const trackClass = isVertical
     ? "relative w-px flex-1 min-h-10 overflow-visible"
-    : "relative h-px flex-1 overflow-visible"
+    : cn("relative h-px overflow-visible", !growingGap && "flex-1")
   const driftDotClass = isVertical
     ? "absolute inset-x-0 mx-auto size-1 rounded-full bg-primary/60"
     : "absolute inset-y-0 my-auto size-1 rounded-full bg-primary/60"
 
   return (
-    <div className={trackClass}>
+    <div
+      className={trackClass}
+      style={growingGap ? { flex: `1 1 ${FLOW_GAP_WIDTH}px`, minWidth: FLOW_GAP_WIDTH } : undefined}
+    >
       <div className="absolute inset-0 overflow-hidden rounded-full bg-border">
         {lit && !flowing && !settled
           ? DRIFT_PARTICLES.map((delay) => (
@@ -322,18 +328,22 @@ export function StageFlow<T extends string>({
     )
   }
 
+  const rowGapCount = size === "lg" ? Math.max(stages.length - 1, 0) : 0
+
   return (
-    <div className="flex items-center">
+    <div className="flex items-center" style={size === "lg" ? { flexGrow: rowGapCount } : undefined}>
       {stages.map((stageKey, index) => {
         const state = nodeState(stageKey, index)
         const clickable = isNodeClickable?.(stageKey, index) ?? false
+        const hasTrailingConnector = index < stages.length - 1
         return (
-          <div key={stageKey} className="flex flex-1 items-center last:flex-none">
+          <div
+            key={stageKey}
+            className={cn("flex items-center", size !== "lg" && "flex-1 last:flex-none")}
+            style={size === "lg" ? { flexGrow: hasTrailingConnector ? 1 : 0 } : undefined}
+          >
             <div
-              className={cn(
-                "flex flex-col items-center gap-1.5",
-                size === "lg" && "w-24 shrink-0"
-              )}
+              className={cn("flex flex-col items-center gap-1.5", size === "lg" && "relative shrink-0")}
             >
               <StageNode
                 stageKey={stageKey}
@@ -345,16 +355,22 @@ export function StageFlow<T extends string>({
                 size={size}
               />
               {showLabels ? (
-                <span className="w-max max-w-28 text-center text-[9.5px] font-semibold whitespace-nowrap text-muted-foreground">
+                <span
+                  className={cn(
+                    "max-w-28 text-center text-[9.5px] font-semibold whitespace-nowrap text-muted-foreground",
+                    size === "lg" ? "absolute top-full mt-1.5 left-1/2 w-max -translate-x-1/2" : "w-max"
+                  )}
+                >
                   {labels[stageKey]}
                 </span>
               ) : null}
             </div>
-            {index < stages.length - 1 ? (
+            {hasTrailingConnector ? (
               <Connector
                 lit={index < activeIndex}
                 flowing={index === activeIndex - 1}
                 settled={settled}
+                size={size}
               />
             ) : null}
           </div>
