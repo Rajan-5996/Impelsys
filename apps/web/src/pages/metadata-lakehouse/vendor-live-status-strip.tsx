@@ -26,7 +26,7 @@ export function VendorLiveStatusStrip({
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 font-medium text-foreground">
           <DatabaseIcon className="size-3.5 text-primary" />
-          <span>Real Connectors ({sources.length}):</span>
+          <span>Connectors ({sources.length}):</span>
           <div className="flex items-center gap-1">
             {sources.map((s) => (
               <span key={s.name} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted/80 text-foreground border border-border">

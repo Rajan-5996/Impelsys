@@ -199,7 +199,7 @@ export const POWERBI_VISUAL_SPECS: Record<string, PowerBiVisualSpec> = {
     requiredColumns: ["sales_amount"], aggregationMetric: "SUM(sales_amount)", status: "healthy",
   },
   "pbi-region": {
-    nodeId: "pbi-region", visualId: "vis-regional-heatmap", title: "Regional Sales Performance", chartType: "bar",
+    nodeId: "pbi-region", visualId: "vis-regional-heatmap", title: "Regional Sales Performance", chartType: "heatmap",
     requiredColumns: ["region", "sales_amount"], aggregationMetric: "SUM(sales_amount) BY region", status: "healthy",
   },
   "pbi-cat": {

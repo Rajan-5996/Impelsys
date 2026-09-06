@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import {
-  Building2Icon, CheckIcon, ChevronDownIcon, DatabaseIcon,
-  Loader2Icon, PlayIcon, RotateCcwIcon, ShieldAlertIcon, WorkflowIcon, XCircleIcon,
+  Building2Icon, CheckIcon, ChevronDownIcon, Maximize2Icon, Minimize2Icon,
+  ShieldAlertIcon, XCircleIcon, Sparkles
 } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
@@ -16,8 +16,8 @@ import { getVendorLineageConfig } from "./vendor-lineage-configs"
 import { VendorLiveStatusStrip } from "./vendor-live-status-strip"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
-  advanceSimulationStep, fetchVendorLineage, openDataSourceModal, recomputeImpact,
-  resetStageCode, selectMetadataLakehouse, selectVendor, startSequentialExecution,
+  fetchVendorLineage, recomputeImpact,
+  resetStageCode, selectMetadataLakehouse, selectVendor,
   toggleAnomalySimulation,
 } from "@/store/metadata-lakehouse-slice"
 import { fetchVendors, selectVendors } from "@/store/vendors-slice"
@@ -25,12 +25,18 @@ import { pushToast } from "@/store/ui-slice"
 
 export function MetadataLakehousePage() {
   const dispatch = useAppDispatch()
-  const { diagnosticSummary: diagnostic, nodes, simulationState, selectedVendorId, activeSimulatedAnomalyNodeId } =
-    useAppSelector(selectMetadataLakehouse)
+  const {
+    diagnosticSummary: diagnostic,
+    nodes,
+    selectedVendorId,
+    activeSimulatedAnomalyNodeId,
+  } = useAppSelector(selectMetadataLakehouse)
   const vendors = useAppSelector(selectVendors)
 
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false)
+  const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false)
   const vendorDropdownRef = useRef<HTMLDivElement>(null)
+  const canvasFullscreenRef = useRef<HTMLDivElement>(null)
 
   const currentVendorName = vendors.find((v) => v.vendor_id === selectedVendorId)?.name ?? selectedVendorId
   const currentVendor = getVendorLineageConfig(selectedVendorId, currentVendorName)
@@ -61,10 +67,20 @@ export function MetadataLakehousePage() {
   }, [isVendorDropdownOpen])
 
   useEffect(() => {
-    if (!simulationState.isRunning) return
-    const interval = setInterval(() => dispatch(advanceSimulationStep()), 750)
-    return () => clearInterval(interval)
-  }, [dispatch, simulationState.isRunning, simulationState.currentExecutionIndex])
+    function handleFullscreenChange() {
+      setIsCanvasFullscreen(document.fullscreenElement === canvasFullscreenRef.current)
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
+  }, [])
+
+  function handleToggleCanvasFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      canvasFullscreenRef.current?.requestFullscreen()
+    }
+  }
 
   const errorCount = Object.values(nodes).filter((n) => n.status === "error").length
   const healthyCount = Object.values(nodes).filter((n) => n.status === "success").length
@@ -74,11 +90,6 @@ export function MetadataLakehousePage() {
     if (diagnostic.rootCauseNodeId) dispatch(resetStageCode(diagnostic.rootCauseNodeId))
     dispatch(recomputeImpact())
     dispatch(pushToast("Reset all transformations and re-established schema continuity.", "info"))
-  }
-
-  function handleStartExecution() {
-    dispatch(startSequentialExecution())
-    dispatch(pushToast("Started step-by-step pipeline execution across 5 tiers.", "info"))
   }
 
   function handleVendorChange(vendorId: string, vendorName: string) {
@@ -92,13 +103,10 @@ export function MetadataLakehousePage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <WorkflowIcon className="size-4" />
+              <Sparkles className="size-4" />
             </span>
-            <h1 className="text-lg font-bold text-foreground">Metadata Lakehouse — Lineage &amp; Impact Simulator</h1>
+            <h1 className="text-lg font-bold text-foreground">Metadata Lakehouse — Lineage</h1>
           </div>
-          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-            5-tier interactive DAG tracing schema propagation: Data Source &rarr; Anomaly Agent &rarr; Quality Agent &rarr; 4-Stage ETL &rarr; Power BI.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -161,61 +169,76 @@ export function MetadataLakehousePage() {
             </AnimatePresence>
           </div>
 
-          <Button size="sm" variant="outline" onClick={() => dispatch(openDataSourceModal())} className="border-border text-xs">
-            <DatabaseIcon className="size-3.5 text-primary" /> Upload Dataset
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={handleToggleCanvasFullscreen}
+            title="View Fullscreen"
+          >
+            <Maximize2Icon />
           </Button>
-          <Button size="sm" variant="outline" onClick={handleResetAll} className="border-border text-xs">
-            <RotateCcwIcon className="size-3.5" /> Reset Schema
-          </Button>
-          <Button size="sm" disabled={simulationState.isRunning} onClick={handleStartExecution} className="bg-primary text-primary-foreground font-semibold text-xs shadow-sm">
-            {simulationState.isRunning ? <Loader2Icon className="size-3.5 animate-spin mr-1.5" /> : <PlayIcon className="size-3.5 fill-current mr-1.5" />}
-            {simulationState.isRunning ? "Processing Steps..." : "Run Step-by-Step"}
-          </Button>
-        </div>
+          </div>
       </div>
 
       <VendorLiveStatusStrip vendorId={selectedVendorId} pipelineCode={currentVendor.pipelineCode} runningCount={runningCount} healthyCount={healthyCount} errorCount={errorCount} />
 
-      {diagnostic.hasBreakage && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-status-critical/40 bg-status-critical/10 p-3 text-xs flex items-center justify-between gap-3 shadow-xs"
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-status-critical/20 text-status-critical">
-              <ShieldAlertIcon className="size-4" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-bold text-status-critical">
-                  {activeSimulatedAnomalyNodeId ? `Active Incident Analysis: ${nodes[activeSimulatedAnomalyNodeId]?.title ?? "Root Cause"}` : `Schema Breakage Detected: Dropped column '${diagnostic.culpritColumn}'`}
-                </p>
-                {diagnostic.culpritColumn && (
-                  <span className="rounded bg-status-critical/20 px-1.5 py-0.5 text-[10px] font-mono font-bold text-status-critical border border-status-critical/30">
-                    Root Culprit: {diagnostic.culpritColumn}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Impacted ETL Stages: <span className="font-semibold text-foreground">{diagnostic.impactedEtlStages.join(", ") || "None (Fully Isolated)"}</span> &middot; Broken Power BI Dashboards: <span className="font-semibold text-status-critical">{diagnostic.brokenPbiVisuals.join(", ") || "None (Healthy)"}</span>
-              </p>
-              <p className="text-[11px] text-status-critical/95 font-medium mt-1 leading-relaxed max-w-5xl">{diagnostic.technicalRemediation}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {activeSimulatedAnomalyNodeId ? (
-              <Button size="xs" variant="outline" className="border-status-critical/40 text-status-critical hover:bg-status-critical/10" onClick={() => dispatch(toggleAnomalySimulation(activeSimulatedAnomalyNodeId))}>
-                <XCircleIcon className="size-3.5 mr-1" /> Clear Anomaly
-              </Button>
-            ) : (
-              <Button size="xs" variant="outline" className="shrink-0" onClick={handleResetAll}>Restore Column &amp; Re-run</Button>
-            )}
-          </div>
-        </motion.div>
-      )}
+      <div ref={canvasFullscreenRef} className="relative flex-1 min-h-0 flex flex-col gap-4 bg-background">
+        {isCanvasFullscreen && (
+          <Button
+            size="icon-xs"
+            variant="outline"
+            className="absolute top-4 right-4 z-50 bg-card shadow-md"
+            onClick={handleToggleCanvasFullscreen}
+            title="Exit Fullscreen"
+          >
+            <Minimize2Icon />
+          </Button>
+        )}
 
-      <LineageCanvas />
+        {diagnostic.hasBreakage && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "rounded-xl border border-status-critical/40 bg-status-critical/10 p-3 text-xs flex items-center justify-between gap-3 shadow-xs shrink-0",
+              isCanvasFullscreen && "mx-4 mt-4"
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-status-critical/20 text-status-critical">
+                <ShieldAlertIcon className="size-4" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-status-critical">
+                    {activeSimulatedAnomalyNodeId ? `I found an issue at: ${nodes[activeSimulatedAnomalyNodeId]?.title ?? "this step"}` : `I found a problem — the '${diagnostic.culpritColumn}' column has gone missing`}
+                  </p>
+                  {diagnostic.culpritColumn && (
+                    <span className="rounded bg-status-critical/20 px-1.5 py-0.5 text-[10px] font-mono font-bold text-status-critical border border-status-critical/30">
+                      Cause: {diagnostic.culpritColumn}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Pipeline steps affected: <span className="font-semibold text-foreground">{diagnostic.impactedEtlStages.join(", ") || "None"}</span> &middot; Dashboards affected: <span className="font-semibold text-status-critical">{diagnostic.brokenPbiVisuals.join(", ") || "None — all healthy"}</span>
+                </p>
+                <p className="text-[11px] text-status-critical/95 font-medium mt-1 leading-relaxed max-w-5xl">{diagnostic.technicalRemediation}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {activeSimulatedAnomalyNodeId ? (
+                <Button size="xs" variant="outline" className="border-status-critical/40 text-status-critical hover:bg-status-critical/10" onClick={() => dispatch(toggleAnomalySimulation(activeSimulatedAnomalyNodeId))}>
+                  <XCircleIcon className="size-3.5 mr-1" /> Clear Issue
+                </Button>
+              ) : (
+                <Button size="xs" variant="outline" className="shrink-0" onClick={handleResetAll}>Restore Column &amp; Re-run</Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        <LineageCanvas />
+      </div>
 
       <DataSourceModal />
       <CodeInspectorDrawer />

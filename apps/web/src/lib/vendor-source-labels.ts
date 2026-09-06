@@ -1,5 +1,6 @@
 import databricksLogo from "@/assets/databricks.png"
 import domoLogo from "@/assets/domo.png"
+import salesforceLogo from "@/assets/salesforce.png"
 import snowflakeLogo from "@/assets/snowflake.png"
 
 export type VendorSourceSystem = {
@@ -10,12 +11,14 @@ export type VendorSourceSystem = {
 const SNOWFLAKE: VendorSourceSystem = { name: "Snowflake", logo: snowflakeLogo }
 const DATABRICKS: VendorSourceSystem = { name: "Databricks", logo: databricksLogo }
 const DOMO: VendorSourceSystem = { name: "DOMO", logo: domoLogo }
+const SALESFORCE: VendorSourceSystem = { name: "Salesforce", logo: salesforceLogo }
 
 const SOURCE_SYSTEMS = [SNOWFLAKE, DATABRICKS, DOMO]
 
-// Blended pipelines -- these 4 vendors land feeds from more than one upstream
+// Blended pipelines -- these vendors land feeds from more than one upstream
 // system, everyone else ingests from a single source (below).
 const MULTI_SOURCE_VENDORS: Record<string, VendorSourceSystem[]> = {
+  "VEND-01": [DOMO, SALESFORCE],
   "VEND-02": [SNOWFLAKE, DATABRICKS],
   "VEND-04": [DOMO, SNOWFLAKE],
   "VEND-06": [DATABRICKS, DOMO],

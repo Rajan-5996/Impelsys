@@ -11,6 +11,7 @@ import gcpLogo from "@/assets/gcp.png"
 import databricksLogo from "@/assets/databricks.png"
 import snowflakeLogo from "@/assets/snowflake.png"
 import dbtLogo from "@/assets/DBT.png"
+import salesforceLogo from "@/assets/salesforce.png"
 
 export type ConnectorTint = "primary" | "standard" | "accent"
 
@@ -171,5 +172,18 @@ export const CONNECTORS: Connector[] = [
     lastSync: "Never",
     logo: dbtLogo,
     tint: "accent",
+  },
+  {
+    id: "salesforce",
+    name: "Salesforce",
+    category: "CRM",
+    description: "Customer and account records synced for supplier relationship context.",
+    detail:
+      "Account, contact, and opportunity records from Salesforce would give agents customer-side context to correlate against supplier data quality issues, once connected.",
+    status: "Not Connected",
+    owner: "Supplier Operations",
+    lastSync: "Never",
+    logo: salesforceLogo,
+    tint: "primary",
   },
 ]

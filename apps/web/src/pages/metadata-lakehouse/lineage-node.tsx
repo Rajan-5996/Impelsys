@@ -21,6 +21,8 @@ interface LineageNodeProps {
   isHighlighted?: boolean
   isDimmed?: boolean
   isSelected?: boolean
+  inPortOffsets?: number[]
+  outPortOffsets?: number[]
   onSelectNode: (node: LineageNode) => void
   onHoverStart: (nodeId: string) => void
   onHoverEnd: () => void
@@ -45,20 +47,35 @@ function getNodeIcon(category: string, status: string) {
   return <SparklesIcon className="size-3.5 text-muted-foreground" />
 }
 
-const PORT_DOT = "absolute size-3 -translate-y-1/2 rounded-full border-2 border-card bg-muted-foreground/60 transition-colors group-hover:bg-primary"
+function getCategoryAvatarIcon(category: string) {
+  if (category === "anomaly") return <ShieldAlertIcon className="size-4" />
+  if (category === "quality") return <ShieldCheckIcon className="size-4" />
+  if (category === "etl") return <Code2Icon className="size-4" />
+  if (category === "powerbi") return <LayoutDashboardIcon className="size-4" />
+  if (category === "source") return <DatabaseIcon className="size-4" />
+  return <SparklesIcon className="size-4" />
+}
+
+// Centered exactly on the card border (half of size-2.5's 10px = 5px offset)
+// so the connecting line's stroke still lands in the right spot -- kept
+// invisible (opacity-0) since the dot itself is purely decorative and the
+// edge lines already anchor to this same coordinate independently.
+const PORT_DOT = "absolute z-10 size-2.5 -translate-y-1/2 rounded-full opacity-0"
+
+const CARD_GRADIENT = "bg-gradient-to-br from-primary/20 via-primary/[0.06] to-card"
 
 function portClass(side: "left" | "right", isSuccess?: boolean, isRunning?: boolean, isHighlighted?: boolean, isError?: boolean) {
   return cn(
-    PORT_DOT, side === "left" ? "-left-1.5" : "-right-1.5",
-    isSuccess && "bg-status-good shadow-[0_0_8px_rgba(12,163,12,0.8)]",
-    isRunning && "bg-primary shadow-[0_0_10px_rgba(112,48,177,0.9)] animate-ping",
-    isHighlighted && "bg-primary shadow-[0_0_8px_rgba(112,48,177,0.7)]",
-    isError && "bg-status-critical shadow-[0_0_8px_rgba(208,59,59,0.7)]"
+    PORT_DOT, side === "left" ? "-left-[5px]" : "-right-[5px]",
+    isSuccess && "bg-status-good shadow-[0_0_6px_rgba(12,163,12,0.7)]",
+    isRunning && "bg-primary shadow-[0_0_8px_rgba(112,48,177,0.9)] animate-ping",
+    isHighlighted && "bg-primary shadow-[0_0_6px_rgba(112,48,177,0.6)]",
+    isError && "bg-status-critical shadow-[0_0_6px_rgba(208,59,59,0.6)]"
   )
 }
 
 export function LineageNodeComponent({
-  node, isHighlighted, isDimmed, isSelected, onSelectNode, onHoverStart, onHoverEnd,
+  node, isHighlighted, isDimmed, isSelected, inPortOffsets, outPortOffsets, onSelectNode, onHoverStart, onHoverEnd,
 }: LineageNodeProps) {
   const isError = node.status === "error"
   const isWarning = node.status === "warning"
@@ -68,22 +85,24 @@ export function LineageNodeComponent({
   const isBypassed = node.status === "bypassed"
 
   const badgeTheme = BADGE_COLOR_MAP[node.category] ?? "bg-card text-foreground"
-  const multiInPorts = node.id === "etl-s1" ? [16, 30, 46, 60] : node.category === "anomaly" ? [24, 52] : null
-  const multiOutPorts = node.id === "etl-s4" || node.category === "source" ? [16, 30, 46, 60] : null
+  const inPorts = inPortOffsets && inPortOffsets.length > 0 ? inPortOffsets : null
+  const outPorts = outPortOffsets && outPortOffsets.length > 0 ? outPortOffsets : null
 
   return (
     <motion.div
+      data-lineage-node="true"
       layoutId={`node-card-${node.id}`}
       whileHover={{ y: -2, transition: { duration: 0.15 } }}
       onMouseEnter={() => onHoverStart(node.id)}
       onMouseLeave={onHoverEnd}
       onClick={() => onSelectNode(node)}
       className={cn(
-        "group relative flex w-[238px] h-[76px] justify-between cursor-pointer flex-col rounded-xl border bg-card/95 p-2.5 shadow-xs backdrop-blur-xs transition-all duration-200",
+        "group relative flex w-[238px] h-[76px] justify-between cursor-pointer flex-col rounded-xl border p-2.5 shadow-xs backdrop-blur-xs transition-all duration-200",
+        !isError && !isWarning && CARD_GRADIENT,
         isSelected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-        isRunning && "border-primary shadow-lg shadow-primary/20 ring-1 ring-primary animate-pulse bg-primary/5",
+        isRunning && "border-primary shadow-lg shadow-primary/20 ring-1 ring-primary animate-pulse",
         isWarning && "border-amber-500/80 bg-amber-500/10 shadow-amber-500/20 ring-1 ring-amber-500 animate-pulse",
-        isSuccess && "border-status-good/50 bg-card hover:border-status-good",
+        isSuccess && "border-status-good/50 hover:border-status-good",
         isQueued && "opacity-50 grayscale-[40%] border-border/70",
         isHighlighted && "border-primary shadow-md shadow-primary/10",
         isDimmed && "opacity-30 grayscale-[50%]",
@@ -92,16 +111,16 @@ export function LineageNodeComponent({
           : "border-border hover:border-primary/50 hover:shadow-md"
       )}
     >
-      {multiInPorts
-        ? multiInPorts.map((topPx, i) => (
+      {inPorts
+        ? inPorts.map((topPx, i) => (
             <span key={`in-${i}`} style={{ top: `${topPx}px` }} className={portClass("left", isSuccess, isRunning, isHighlighted, isError)} />
           ))
         : node.inputPorts.length > 0 ? (
             <span style={{ top: "50%" }} className={portClass("left", isSuccess, isRunning, isHighlighted, isError)} />
           ) : null}
 
-      {multiOutPorts
-        ? multiOutPorts.map((topPx, i) => (
+      {outPorts
+        ? outPorts.map((topPx, i) => (
             <span key={`out-${i}`} style={{ top: `${topPx}px` }} className={portClass("right", isSuccess, isRunning, isHighlighted, isError)} />
           ))
         : node.outputPorts.length > 0 ? (
@@ -115,8 +134,8 @@ export function LineageNodeComponent({
               <img src={node.logoSrc} alt={node.badgeCode} className="size-5 object-contain" />
             </span>
           ) : (
-            <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-md border text-[9.5px] font-bold tracking-tight shadow-xs", badgeTheme)}>
-              {node.badgeCode}
+            <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg border shadow-xs", badgeTheme)}>
+              {getCategoryAvatarIcon(node.category)}
             </span>
           )}
           <div className="min-w-0">

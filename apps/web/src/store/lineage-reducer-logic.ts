@@ -68,6 +68,17 @@ export function applyVendorToNodes(
     }
   })
 
+  cfg.pbiVisuals.forEach((visual) => {
+    if (updatedNodes[visual.id]) {
+      updatedNodes[visual.id] = {
+        ...updatedNodes[visual.id],
+        title: visual.title, subtitle: visual.subtitle, description: visual.description,
+        status: "success",
+      }
+      delete updatedNodes[visual.id].errorMessage
+    }
+  })
+
   const edges = createLineageEdgesForSources(cfg.sourceNodes.map((s) => s.id))
   return { nodes: updatedNodes, edges }
 }

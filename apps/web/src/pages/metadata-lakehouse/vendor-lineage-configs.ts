@@ -1,5 +1,6 @@
 import databricksLogo from "@/assets/databricks.png"
 import domoLogo from "@/assets/domo.png"
+import salesforceLogo from "@/assets/salesforce.png"
 import snowflakeLogo from "@/assets/snowflake.png"
 
 import { sourceSystemsForVendor } from "@/lib/vendor-source-labels"
@@ -24,6 +25,13 @@ export interface VendorEtlStageConfig {
   columnsOutput: string[]
 }
 
+export interface VendorPbiVisualConfig {
+  id: string
+  title: string
+  subtitle: string
+  description: string
+}
+
 export interface VendorLineageConfig {
   id: string
   name: string
@@ -31,18 +39,21 @@ export interface VendorLineageConfig {
   pipelineCode: string
   pipelineTitle: string
   etlStages: VendorEtlStageConfig[]
+  pbiVisuals: VendorPbiVisualConfig[]
 }
 
 const SOURCE_FLAVOR: Record<string, { subtitle: string; badgeCode: string; description: string }> = {
   Snowflake: { subtitle: "Cloud Data Warehouse", badgeCode: "SNOW", description: "Enterprise Snowflake staging schema landing structured order and billing data." },
   Databricks: { subtitle: "Delta Lakehouse Feed", badgeCode: "DBX", description: "Databricks Unity Catalog Delta table streaming curated operational records." },
   DOMO: { subtitle: "Cloud Stream Ingestion", badgeCode: "DOMO", description: "Real-time DOMO webhook stream delivering transactional feed records." },
+  Salesforce: { subtitle: "CRM Cloud Sync", badgeCode: "SFDC", description: "Salesforce CRM sync delivering account, contact, and order activity records." },
 }
 
 const LOGO_BY_SYSTEM: Record<string, string> = {
   Snowflake: snowflakeLogo,
   Databricks: databricksLogo,
   DOMO: domoLogo,
+  Salesforce: salesforceLogo,
 }
 
 /** Real per-vendor connector fan-in, sourced from the same lib the pipeline
@@ -76,10 +87,19 @@ function stages(pipelineCode: string, rows: Array<[string, string, string, strin
   }
 }
 
+const PBI_NODE_IDS = ["pbi-kpi", "pbi-region", "pbi-cat", "pbi-churn"] as const
+
+function pbi(rows: Array<[string, string, string]>): VendorPbiVisualConfig[] {
+  return rows.map(([title, subtitle, description], i) => ({ id: PBI_NODE_IDS[i]!, title, subtitle, description }))
+}
+
 /** ETL stage flavor text per real vendor id (VEND-01..08) -- the interactive
  * simulator's DAG/breakage engine stays generic, but the story each vendor's
  * pipeline tells is vendor-specific and kept from the original design. */
-const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: string; etlStages: VendorEtlStageConfig[] }> = {
+const VENDOR_ETL_FLAVOR: Record<
+  string,
+  { pipelineCode: string; pipelineTitle: string; etlStages: VendorEtlStageConfig[]; pbiVisuals: VendorPbiVisualConfig[] }
+> = {
   "VEND-01": {
     pipelineTitle: "NorthStar Retail Omnichannel Stream",
     ...stages("NORTHSTAR_RETAIL_ETL", [
@@ -87,6 +107,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Retail Normalization & FX", "Multi-Currency USD Converter", "Standardizes retail store timestamps and converts regional currencies into base USD.", ["order_id", "customer_id", "currency", "sales_amount"]],
       ["Store Margin & Tax Rules", "Omnichannel Profit Engine", "Applies retail markdowns, promotional coupon discounts, and jurisdictional sales tax rates.", ["sales_amount", "discount_pct", "tax_rate"]],
       ["Curate & Export to Delta", "Retail Lakehouse Sync", "Partitions records by store region and writes to curated Delta tables for executive BI.", ["order_id", "customer_id", "product_code", "sales_amount", "region", "customer_segment"]],
+    ]),
+    pbiVisuals: pbi([
+      ["Executive Revenue KPI", "Card Visual: Total Sales", "Primary revenue KPI card displaying aggregate net retail revenue."],
+      ["Regional Sales Heatmap", "Geo Matrix Visual", "Geographic performance matrix breakdown across store sales territories."],
+      ["Product Category Revenue Split", "Donut & Bar Visual", "Product category distribution chart powered by the joined product master."],
+      ["Segment Account Matrix", "Customer Drilldown", "Enterprise vs SMB account retention and segment performance visual."],
     ]),
   },
   "VEND-02": {
@@ -97,6 +123,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Volume Discount Rules", "Wholesale Tier Pricing Engine", "Calculates wholesale tier price breaks, bulk shipment surcharges, and partner rebates.", ["sales_amount", "discount_pct"]],
       ["Logistics Manifest Export", "Delta Lake Sync", "Exports validated supply manifest tables to the lakehouse for carrier dispatch optimization.", ["order_id", "customer_id", "product_code", "sales_amount", "region"]],
     ]),
+    pbiVisuals: pbi([
+      ["Fulfillment Revenue KPI", "Card Visual: Net Wholesale Revenue", "Primary KPI card displaying aggregate wholesale fulfillment revenue."],
+      ["Warehouse Regional Throughput", "Geo Matrix Visual", "Geographic dispatch throughput matrix across warehouse regions."],
+      ["SKU Category Margin Split", "Donut & Bar Visual", "SKU category margin distribution powered by the joined parts catalog."],
+      ["Partner Account Tier Matrix", "Wholesale Drilldown", "Partner account tier retention and rebate performance visual."],
+    ]),
   },
   "VEND-03": {
     pipelineTitle: "GlobalFeeds Telemetry & Billing Pipeline",
@@ -105,6 +137,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Geo-Coordinate Standardizer", "Global GPS Alignment Engine", "Enriches sensor coordinates with international shipping region metadata and customs codes.", ["order_id", "customer_id", "region"]],
       ["Dynamic Surge Pricing Rules", "Tariff & Surcharge Engine", "Computes bandwidth utilization rates, peak transmission tariffs, and tiered billing quotas.", ["sales_amount", "discount_pct"]],
       ["Telemetry Lakehouse Export", "Gold Layer Billing Warehouse", "Publishes enriched telemetric billing datasets directly to executive reporting models.", ["order_id", "customer_id", "product_code", "sales_amount", "customer_segment"]],
+    ]),
+    pbiVisuals: pbi([
+      ["Telemetry Billing KPI", "Card Visual: Total Usage Revenue", "Primary KPI card displaying aggregate metered usage revenue."],
+      ["Regional Bandwidth Heatmap", "Geo Matrix Visual", "Geographic bandwidth utilization matrix across transmission regions."],
+      ["Service Tier Revenue Split", "Donut & Bar Visual", "Service tier revenue distribution chart powered by the billing catalog."],
+      ["Subscriber Segment Matrix", "Billing Drilldown", "Subscriber segment retention and usage tier performance visual."],
     ]),
   },
   "VEND-04": {
@@ -115,6 +153,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Freight & Route Cost Rules", "Distance Matrix Cost Engine", "Applies ocean carrier bunker fuel surcharges and container demurrage allowances.", ["sales_amount", "discount_pct", "tax_rate"]],
       ["Carrier Manifest Export", "Logistics Analytics Store", "Consolidates shipment routing tables into high-performance lakehouse storage.", ["order_id", "customer_id", "product_code", "sales_amount", "region"]],
     ]),
+    pbiVisuals: pbi([
+      ["Freight Revenue KPI", "Card Visual: Total Freight Billed", "Primary KPI card displaying aggregate cross-border freight revenue."],
+      ["Trade Lane Regional Heatmap", "Geo Matrix Visual", "Geographic trade lane volume matrix across shipping corridors."],
+      ["Commodity Category Duty Split", "Donut & Bar Visual", "Commodity category duty distribution powered by the HS code catalog."],
+      ["Carrier Account Matrix", "Shipment Drilldown", "Carrier account performance and demurrage exposure visual."],
+    ]),
   },
   "VEND-05": {
     pipelineTitle: "Summit High-Volume B2B Sales Flow",
@@ -123,6 +167,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Account Credit Scoring", "Risk & Terms Engine", "Computes buyer net-payment term limits, risk grading, and early settlement discounts.", ["order_id", "customer_id", "sales_amount"]],
       ["Contract Rebate Engine", "Annual Volume Incentive Rules", "Calculates cumulative purchase incentives, tiered cash rebates, and marketing funds.", ["sales_amount", "discount_pct"]],
       ["Ledger Warehouse Write", "ERP Financial Staging Table", "Writes verified revenue lines to the financial ledger for GL synchronization.", ["order_id", "customer_id", "product_code", "sales_amount", "region"]],
+    ]),
+    pbiVisuals: pbi([
+      ["B2B Revenue KPI", "Card Visual: Net Contract Revenue", "Primary KPI card displaying aggregate B2B contract revenue."],
+      ["Regional Account Heatmap", "Geo Matrix Visual", "Geographic account concentration matrix across sales territories."],
+      ["Product Line Rebate Split", "Donut & Bar Visual", "Product line rebate distribution powered by the contract catalog."],
+      ["Buyer Credit Risk Matrix", "Account Drilldown", "Buyer credit grading and payment term risk performance visual."],
     ]),
   },
   "VEND-06": {
@@ -133,6 +183,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["SLA Penalty Calculations", "Contract Demurrage Engine", "Computes carrier SLA penalties for delayed shipments and detention charges.", ["sales_amount", "discount_pct"]],
       ["Dispatch Metric Store Sync", "Carrier Operations Lake", "Exports verified transit and cold-chain compliance matrices for executive BI.", ["order_id", "customer_id", "product_code", "sales_amount", "region"]],
     ]),
+    pbiVisuals: pbi([
+      ["Cold-Chain Revenue KPI", "Card Visual: Total Freight Revenue", "Primary KPI card displaying aggregate cold-chain freight revenue."],
+      ["Transit Lane Heatmap", "Geo Matrix Visual", "Geographic transit delay matrix across dispatch lanes."],
+      ["Cargo Category SLA Split", "Donut & Bar Visual", "Cargo category SLA compliance distribution powered by the dispatch catalog."],
+      ["Carrier Compliance Matrix", "Fleet Drilldown", "Carrier SLA compliance and detention charge performance visual."],
+    ]),
   },
   "VEND-07": {
     pipelineTitle: "Cascade Commodity Clearing Stream",
@@ -142,6 +198,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Broker Commission Rules", "Clearing Margin Engine", "Applies exchange transaction fees, clearing margins, and tiered brokerage commissions.", ["sales_amount", "tax_rate"]],
       ["Settlement Ledger Export", "Institutional Lakehouse Store", "Exports audit-ready trade blotters to the financial risk warehouse for reporting.", ["order_id", "customer_id", "product_code", "sales_amount", "region"]],
     ]),
+    pbiVisuals: pbi([
+      ["Clearing Revenue KPI", "Card Visual: Net Trade Settlement", "Primary KPI card displaying aggregate net trade settlement value."],
+      ["Exchange Regional Heatmap", "Geo Matrix Visual", "Geographic trade volume matrix across exchange venues."],
+      ["Commodity Class Margin Split", "Donut & Bar Visual", "Commodity class clearing margin distribution powered by the trade catalog."],
+      ["Counterparty Risk Matrix", "Trade Drilldown", "Counterparty exposure and settlement risk performance visual."],
+    ]),
   },
   "VEND-08": {
     pipelineTitle: "Ironclad Omni-Channel Commerce Pipeline",
@@ -150,6 +212,12 @@ const VENDOR_ETL_FLAVOR: Record<string, { pipelineCode: string; pipelineTitle: s
       ["Omni-Channel Normalization", "Global Basket Currency Engine", "Standardizes product identifiers and translates shopping cart values into USD.", ["order_id", "product_code", "currency"]],
       ["Loyalty & Promo Valuation", "Customer Rewards Calculation", "Calculates reward point redemption, multi-buy bundles, and tiered loyalty rebates.", ["sales_amount", "discount_pct"]],
       ["Enterprise Gold Sync", "Centralized Lakehouse Gold", "Publishes unified omnichannel customer performance tables to the analytics lake.", ["order_id", "customer_id", "product_code", "sales_amount", "region", "customer_segment"]],
+    ]),
+    pbiVisuals: pbi([
+      ["Omni-Channel Revenue KPI", "Card Visual: Total Basket Revenue", "Primary KPI card displaying aggregate revenue across all commerce channels."],
+      ["Channel Regional Heatmap", "Geo Matrix Visual", "Geographic channel performance matrix across storefront and web regions."],
+      ["Product Category Loyalty Split", "Donut & Bar Visual", "Product category revenue distribution powered by the loyalty catalog."],
+      ["Customer Loyalty Tier Matrix", "Rewards Drilldown", "Customer loyalty tier retention and redemption performance visual."],
     ]),
   },
 }
@@ -165,5 +233,6 @@ export function getVendorLineageConfig(vendorId: string, vendorName: string): Ve
     pipelineCode: flavor.pipelineCode,
     pipelineTitle: flavor.pipelineTitle,
     etlStages: flavor.etlStages,
+    pbiVisuals: flavor.pbiVisuals,
   }
 }

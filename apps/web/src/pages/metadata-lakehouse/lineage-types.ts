@@ -109,12 +109,6 @@ export interface ImpactDiagnosticSummary {
   recoveryTimestamp?: string
 }
 
-export interface CanvasTransform {
-  scale: number
-  offsetX: number
-  offsetY: number
-}
-
 export interface NeighborHighlightMap {
   activeNodeId: string | null
   highlightedNodeIds: string[]
@@ -172,7 +166,6 @@ export interface MetadataLakehouseState {
   codeOverrides: Record<string, StageCodeDefinition>
   simulationState: PipelineSimulationState
   diagnosticSummary: ImpactDiagnosticSummary
-  canvasTransform: CanvasTransform
   rawDatasetRecords: RawSalesRecord[]
   liveStatusByVendorId: Record<string, VendorLineageLiveStatus>
   liveStatusRequestStatus: AsyncStatus

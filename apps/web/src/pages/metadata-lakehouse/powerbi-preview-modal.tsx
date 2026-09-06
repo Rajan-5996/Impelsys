@@ -7,20 +7,25 @@ import {
 } from "@workspace/ui/components/dialog"
 
 import { POWERBI_VISUAL_SPECS } from "./lineage-data"
+import type { RawSalesRecord } from "./lineage-types"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { closePowerBiModal, recomputeImpact, resetStageCode, selectMetadataLakehouse } from "@/store/metadata-lakehouse-slice"
 import { pushToast } from "@/store/ui-slice"
 
-const MOCK_BAR_DATA = [
-  { name: "Electronics", value: 6850, fill: "#7030B1" },
-  { name: "Software", value: 4920, fill: "#B56DD3" },
-  { name: "Cloud Subs", value: 8340, fill: "#6F2B8B" },
-  { name: "Hardware", value: 3100, fill: "#8F4BC0" },
-]
+const BAR_PALETTE = ["#7030B1", "#B56DD3", "#6F2B8B", "#8F4BC0", "#A16AE8"]
+
+function aggregateByField(records: RawSalesRecord[], field: "product_code" | "customer_segment" | "region") {
+  const totals = new Map<string, number>()
+  for (const record of records) {
+    const key = String(record[field] ?? "Unknown")
+    totals.set(key, (totals.get(key) ?? 0) + Number(record.sales_amount ?? 0))
+  }
+  return Array.from(totals.entries()).map(([name, value], i) => ({ name, value: Math.round(value), fill: BAR_PALETTE[i % BAR_PALETTE.length]! }))
+}
 
 export function PowerBiPreviewModal() {
   const dispatch = useAppDispatch()
-  const { isPowerBiModalOpen: isOpen, inspectingPowerBiNodeId: nodeId, nodes, diagnosticSummary: diagnostic } =
+  const { isPowerBiModalOpen: isOpen, inspectingPowerBiNodeId: nodeId, nodes, diagnosticSummary: diagnostic, rawDatasetRecords } =
     useAppSelector(selectMetadataLakehouse)
 
   if (!isOpen || !nodeId) return null
@@ -28,6 +33,10 @@ export function PowerBiPreviewModal() {
   const node = nodes[nodeId]
   const spec = POWERBI_VISUAL_SPECS[nodeId]
   const isBroken = node?.status === "error"
+  const chartType = spec?.chartType
+  const heatmapData = aggregateByField(rawDatasetRecords, "region")
+  const maxHeatValue = Math.max(...heatmapData.map((cell) => cell.value), 1)
+  const barData = aggregateByField(rawDatasetRecords, nodeId === "pbi-churn" ? "customer_segment" : "product_code")
 
   function handleAutoRemediate() {
     if (diagnostic.rootCauseNodeId) dispatch(resetStageCode(diagnostic.rootCauseNodeId))
@@ -53,7 +62,7 @@ export function PowerBiPreviewModal() {
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/10">
             <div>
-              <h4 className="text-xs font-bold text-foreground">{spec?.title ?? node?.title}</h4>
+              <h4 className="text-xs font-bold text-foreground">{node?.title ?? spec?.title}</h4>
               <p className="text-[11px] text-muted-foreground">Aggregation: <span className="font-mono text-foreground">{spec?.aggregationMetric}</span></p>
             </div>
             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isBroken ? "bg-status-critical/10 text-status-critical border-status-critical/20" : "bg-status-good/10 text-status-good border-status-good/20"}`}>
@@ -89,7 +98,7 @@ export function PowerBiPreviewModal() {
                 <span className="text-[10.5px] text-muted-foreground">Refreshed: Just now</span>
               </div>
 
-              {nodeId === "pbi-kpi" ? (
+              {chartType === "kpi" ? (
                 <div className="grid grid-cols-2 gap-3 py-4">
                   <div className="p-4 rounded-xl bg-muted/20 border border-border text-center">
                     <span className="text-[11px] text-muted-foreground">Gross Revenue</span>
@@ -102,16 +111,33 @@ export function PowerBiPreviewModal() {
                     <span className="text-[10px] text-status-good">Healthy margin</span>
                   </div>
                 </div>
+              ) : chartType === "heatmap" ? (
+                <div className="grid grid-cols-2 gap-3 py-2">
+                  {heatmapData.map((cell) => {
+                    const intensity = cell.value / maxHeatValue
+                    const isDark = intensity > 0.55
+                    return (
+                      <div
+                        key={cell.name}
+                        className="rounded-lg p-4 text-center border border-border"
+                        style={{ backgroundColor: `rgba(112, 48, 177, ${0.12 + intensity * 0.78})` }}
+                      >
+                        <span className={`text-[11px] font-semibold ${isDark ? "text-white" : "text-foreground"}`}>{cell.name}</span>
+                        <p className={`text-lg font-bold mt-1 ${isDark ? "text-white" : "text-foreground"}`}>${cell.value.toLocaleString()}</p>
+                      </div>
+                    )
+                  })}
+                </div>
               ) : (
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={MOCK_BAR_DATA}>
+                    <BarChart data={barData}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                       <XAxis dataKey="name" fontSize={11} stroke="#888888" />
                       <YAxis fontSize={11} stroke="#888888" />
                       <Tooltip />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                        {MOCK_BAR_DATA.map((entry, index) => (
+                        {barData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Bar>

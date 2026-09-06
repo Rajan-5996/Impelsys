@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { SearchIcon } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
 import {
   Select,
   SelectContent,
@@ -21,6 +19,7 @@ import { ANOMALY_TYPE_LABEL } from "@/lib/anomaly-labels"
 import { formatDetailEntries, humanizeSnake, RUN_STATUS_VARIANT } from "@/lib/format-labels"
 import { AnomalyActionDialog } from "@/pages/incidents/anomaly-action-dialog"
 import { RunsTable } from "@/pages/incidents/runs-table"
+import { VendorSearch } from "@/pages/incidents/vendor-search"
 import type { Anomaly } from "@/store/anomalies-slice"
 import {
   fetchAnomalies,
@@ -51,7 +50,6 @@ const TYPE_OPTIONS = Object.entries(ANOMALY_TYPE_LABEL).map(([value, label]) => 
 }))
 
 type AnomaliesFilterState = {
-  search: string
   status: string
   type: string
 }
@@ -68,7 +66,6 @@ export function IncidentsPage() {
   const [vendorFilter, setVendorFilter] = useState("all")
   const [runStatusFilter, setRunStatusFilter] = useState("all")
   const [filters, setFilters] = useState<AnomaliesFilterState>({
-    search: "",
     status: "all",
     type: "all",
   })
@@ -107,23 +104,6 @@ export function IncidentsPage() {
     }
     if (filters.status !== "all" && anomaly.status !== filters.status) return false
     if (filters.type !== "all" && anomaly.anomaly_type !== filters.type) return false
-    if (filters.search) {
-      const needle = filters.search.trim().toLowerCase()
-      const vendorId = runVendorId[anomaly.run_id]
-      const haystack = [
-        anomaly.anomaly_id,
-        anomaly.run_id,
-        (vendorId && vendorNameById[vendorId]) || "",
-        ANOMALY_TYPE_LABEL[anomaly.anomaly_type] ?? anomaly.anomaly_type,
-        anomaly.status,
-        humanizeSnake(runStatusByRunId[anomaly.run_id] ?? ""),
-        formatDetailEntries(anomaly.details),
-        anomaly.decided_by ?? "",
-      ]
-        .join(" ")
-        .toLowerCase()
-      if (!haystack.includes(needle)) return false
-    }
     return true
   })
 
@@ -189,22 +169,10 @@ export function IncidentsPage() {
         </div>
         <div className="flex flex-wrap items-end gap-3 md:gap-5">
           <div className="flex flex-col gap-1">
-            <label
-              htmlFor="anomaly-search"
-              className="text-[10.5px] font-semibold tracking-wide text-muted-foreground"
-            >
-              Search
+            <label className="text-[10.5px] font-semibold tracking-wide text-muted-foreground">
+              Search Vendor
             </label>
-            <div className="flex h-8 min-w-[240px] items-center gap-2 border border-border bg-muted/30 px-2.5">
-              <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <Input
-                id="anomaly-search"
-                value={filters.search}
-                onChange={(event) => setFilters({ ...filters, search: event.target.value })}
-                placeholder="Search anomalies..."
-                className="h-8 border-b-transparent px-0"
-              />
-            </div>
+            <VendorSearch />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10.5px] font-semibold tracking-wide text-muted-foreground">
@@ -329,7 +297,6 @@ export function IncidentsPage() {
             vendorFilter={vendorFilter}
             statusFilter={runStatusFilter}
             vendors={vendors}
-            search={filters.search}
             anomalyRunIds={anomalyRunIds}
           />
 

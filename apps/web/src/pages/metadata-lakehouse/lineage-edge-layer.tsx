@@ -1,4 +1,5 @@
 import type { LineageEdge, LineageNode } from "./lineage-types"
+import { LINEAGE_NODE_HEIGHT } from "./lineage-ports"
 
 interface LineageEdgeLayerProps {
   edges: LineageEdge[]
@@ -9,54 +10,27 @@ interface LineageEdgeLayerProps {
 }
 
 function getPortCoordinates(
-  edge: LineageEdge,
   sourcePos: { x: number; y: number; width: number; height: number },
   targetPos: { x: number; y: number; width: number; height: number }
 ): { startX: number; startY: number; endX: number; endY: number } {
-  let startX = sourcePos.x + sourcePos.width
-  let startY = sourcePos.y + sourcePos.height / 2
-  let endX = targetPos.x
-  let endY = targetPos.y + targetPos.height / 2
-
-  if (edge.sourceNodeId.startsWith("src-")) {
-    if (edge.targetNodeId === "anom-vol") startY = sourcePos.y + 16
-    else if (edge.targetNodeId === "anom-schema") startY = sourcePos.y + 30
-    else if (edge.targetNodeId === "anom-null") startY = sourcePos.y + 46
-    else if (edge.targetNodeId === "anom-dup") startY = sourcePos.y + 60
-
-    if (edge.sourceNodeId === "src-1") endY = targetPos.y + 24
-    else if (edge.sourceNodeId === "src-2") endY = targetPos.y + 52
-    else if (edge.sourceNodeId === "src-3") endY = targetPos.y + 38
+  return {
+    startX: sourcePos.x + sourcePos.width,
+    startY: sourcePos.y + LINEAGE_NODE_HEIGHT / 2,
+    endX: targetPos.x,
+    endY: targetPos.y + LINEAGE_NODE_HEIGHT / 2,
   }
-
-  if (edge.targetNodeId === "etl-s1") {
-    if (edge.sourceNodeId === "dq-fresh") endY = targetPos.y + 16
-    else if (edge.sourceNodeId === "dq-complete") endY = targetPos.y + 30
-    else if (edge.sourceNodeId === "dq-valid") endY = targetPos.y + 46
-    else if (edge.sourceNodeId === "dq-ref") endY = targetPos.y + 60
-  }
-
-  if (edge.sourceNodeId === "etl-s4") {
-    if (edge.targetNodeId === "pbi-kpi") startY = sourcePos.y + 16
-    else if (edge.targetNodeId === "pbi-region") startY = sourcePos.y + 30
-    else if (edge.targetNodeId === "pbi-cat") startY = sourcePos.y + 46
-    else if (edge.targetNodeId === "pbi-churn") startY = sourcePos.y + 60
-  }
-
-  return { startX, startY, endX, endY }
 }
 
+// A cubic bezier with horizontal tangents at both ends: the curve leaves the
+// source port and arrives at the target port moving purely horizontally, so
+// every line reads as anchored to its node instead of angling off at a
+// diagonal. Multiple edges sharing one source port naturally fan out from
+// that single point into a smooth trumpet shape (matching a hand-drawn
+// org-chart connector) rather than the rigid elbow this used to draw.
 function calculatePath(startX: number, startY: number, endX: number, endY: number): string {
-  if (Math.abs(startY - endY) < 3) {
-    return `M ${startX} ${startY} L ${endX} ${endY}`
-  }
-  const dx = Math.abs(endX - startX)
-  const controlDist = Math.max(Math.min(dx * 0.55, 90), 28)
-  const c1x = startX + controlDist
-  const c1y = startY
-  const c2x = endX - controlDist
-  const c2y = endY
-  return `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`
+  const dx = endX - startX
+  const controlOffset = Math.max(Math.abs(dx) * 0.5, 40)
+  return `M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${endX - controlOffset} ${endY}, ${endX} ${endY}`
 }
 
 export function LineageEdgeLayer({ edges, nodes, nodePositions, highlightedEdgeIds, dimmedEdgeIds }: LineageEdgeLayerProps) {
@@ -74,7 +48,7 @@ export function LineageEdgeLayer({ edges, nodes, nodePositions, highlightedEdgeI
           </feMerge>
         </filter>
         {(["purple", "highlight", "error", "dimmed"] as const).map((kind) => (
-          <marker key={kind} id={`marker-arrow-${kind}`} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <marker key={kind} id={`marker-arrow-${kind}`} viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">
             <path
               d="M 0 1.5 L 8 5 L 0 8.5 z"
               fill={kind === "purple" ? "#8B5CF6" : kind === "highlight" ? "#7030B1" : kind === "error" ? "#EF4444" : "#C4B5FD"}
@@ -90,7 +64,7 @@ export function LineageEdgeLayer({ edges, nodes, nodePositions, highlightedEdgeI
 
         const sourceNode = nodes[edge.sourceNodeId]
         const targetNode = nodes[edge.targetNodeId]
-        const { startX, startY, endX, endY } = getPortCoordinates(edge, sourcePos, targetPos)
+        const { startX, startY, endX, endY } = getPortCoordinates(sourcePos, targetPos)
         const pathD = calculatePath(startX, startY, endX, endY)
 
         const isHighlighted = highlightedSet.has(edge.id)
@@ -133,7 +107,6 @@ export function LineageEdgeLayer({ edges, nodes, nodePositions, highlightedEdgeI
                 <animateMotion dur="2.5s" begin="-1.25s" repeatCount="indefinite" path={pathD} keyPoints="0;1" keyTimes="0;1" calcMode="linear" />
               </circle>
             )}
-            <circle cx={startX} cy={startY} r={2.5} fill={strokeColor} opacity={strokeOpacity} />
           </g>
         )
       })}

@@ -16,13 +16,11 @@ export function RunsTable({
   vendorFilter = "all",
   statusFilter = "all",
   vendors = [],
-  search = "",
   anomalyRunIds = null,
 }: {
   vendorFilter?: string
   statusFilter?: string
   vendors?: Vendor[]
-  search?: string
   anomalyRunIds?: Set<string> | null
 }) {
   const dispatch = useAppDispatch()
@@ -81,19 +79,6 @@ export function RunsTable({
     if (statusFilter !== "all" && run.status !== statusFilter) return false
     if (vendorFilter !== "all" && run.vendor_id !== vendorFilter) return false
     if (anomalyRunIds && !anomalyRunIds.has(run.run_id)) return false
-    if (search) {
-      const needle = search.trim().toLowerCase()
-      const haystack = [
-        run.run_id,
-        (run.vendor_id && vendorNameById[run.vendor_id]) || "",
-        runStatusLabel(run.status),
-        humanizeSnake(run.current_stage),
-        run.source_file,
-      ]
-        .join(" ")
-        .toLowerCase()
-      if (!haystack.includes(needle)) return false
-    }
     return true
   })
 

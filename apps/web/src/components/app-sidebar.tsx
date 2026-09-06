@@ -121,7 +121,7 @@ export function AppSidebar() {
                 {...labelMotionProps}
                 className="flex min-w-0 flex-col overflow-hidden"
               >
-                <span className="truncate text-[11px] leading-tight font-medium tracking-wide text-sidebar-foreground uppercase">
+                <span className="text-[11px] leading-tight font-medium tracking-wide text-sidebar-foreground uppercase break-words">
                   GWC Data Operations Platform
                 </span>
               </motion.div>

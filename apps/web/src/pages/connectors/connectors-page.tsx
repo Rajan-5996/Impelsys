@@ -23,8 +23,8 @@ function ConnectorBadge({ connector, size }: { connector: Connector; size: "sm" 
 
   if (connector.logo) {
     return (
-      <span className={cn("shrink-0 overflow-hidden rounded-lg", boxSize)}>
-        <img src={connector.logo} alt={`${connector.name} logo`} className="size-full object-cover" />
+      <span className={cn("flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-white p-1.5 shadow-xs", boxSize)}>
+        <img src={connector.logo} alt={`${connector.name} logo`} className="size-full object-contain" />
       </span>
     )
   }

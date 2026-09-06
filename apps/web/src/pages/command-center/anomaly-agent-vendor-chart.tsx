@@ -84,9 +84,9 @@ export function AnomalyAgentVendorChart() {
             </div>
             <div className="flex flex-col gap-1.5 border-t border-dashed border-border pt-2">
               <p className="text-[9.5px] font-semibold tracking-wide text-muted-foreground uppercase">
-                By Vendor
+                Top 3 Vendors
               </p>
-              {byVendor.map((row, index) => (
+              {byVendor.slice(0, 3).map((row, index) => (
                 <div key={row.key} className="flex items-center gap-2 text-[11px]">
                   <span className="min-w-0 flex-1 truncate text-muted-foreground">{row.label}</span>
                   <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted/40">

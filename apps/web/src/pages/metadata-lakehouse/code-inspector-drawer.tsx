@@ -65,11 +65,11 @@ export function CodeInspectorDrawer() {
   const headerIcon = isAnomalyNode ? <ShieldAlertIcon className="size-4" /> : isQualityNode ? <ShieldCheckIcon className="size-4" /> : <Code2Icon className="size-4" />
   const headerBg = isAnomalyNode ? "bg-amber-500/15 text-amber-500 border-amber-500/30" : isQualityNode ? "bg-purple-500/15 text-purple-400 border-purple-500/30" : "bg-standard/15 text-standard border-standard/30"
   const levelSubtitle = isAnomalyNode
-    ? "LEVEL 2: DATA ANOMALY AGENT"
+    ? "LEVEL 2: ANOMALIX AGENT"
     : isQualityNode
-    ? "LEVEL 3: DATA QUALITY AGENT"
+    ? "LEVEL 3: QA AGENT"
     : isEtlNode
-    ? `LEVEL 4: ETL PIPELINE - Queue Stage ${stageDef.stageNumber} of 4`
+    ? `LEVEL 4: ETL AGENT - Queue Stage ${stageDef.stageNumber} of 4`
     : "DATA PIPELINE NODE INSPECTOR"
 
   return (

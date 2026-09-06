@@ -5,7 +5,6 @@ import { COOKED_RAW_RECORDS, INITIAL_NODES } from "@/pages/metadata-lakehouse/li
 import { STAGE_CODE_CHECKS } from "@/pages/metadata-lakehouse/stage-code-templates"
 import { STAGE_CODE_ETL } from "@/pages/metadata-lakehouse/stage-code-templates-etl"
 import type {
-  CanvasTransform,
   CodeModificationPayload,
   MetadataLakehouseState,
   RawSalesRecord,
@@ -52,7 +51,6 @@ const initialState: MetadataLakehouseState = {
     currentExecutionIndex: 0, totalExecutionSteps: EXECUTION_TIER_GROUPS.length,
   },
   diagnosticSummary: initialDiagnostic,
-  canvasTransform: { scale: 1, offsetX: 0, offsetY: 0 },
   rawDatasetRecords: COOKED_RAW_RECORDS,
   liveStatusByVendorId: {},
   liveStatusRequestStatus: "idle",
@@ -74,7 +72,14 @@ const metadataLakehouseSlice = createSlice({
     },
     toggleAnomalySimulation: (state, action: PayloadAction<string>) => applyAnomalyToggle(state, action.payload),
     setHoveredNode: (state, action: PayloadAction<string | null>) => {
-      state.activeHoverNeighborMap = calculateNeighborMap(action.payload, state.nodes, state.edges)
+      // A click-selected node owns the fade/highlight until it's explicitly
+      // cleared (click again, or "Clear Anomaly") -- hovering elsewhere
+      // must not disturb it.
+      if (state.activeSimulatedAnomalyNodeId) return
+      const hoveredNodeId = action.payload
+      state.activeHoverNeighborMap = hoveredNodeId
+        ? calculateNeighborMap(hoveredNodeId, state.nodes, state.edges)
+        : initialNeighborMap
     },
     openDataSourceModal: (state) => { state.isDataSourceModalOpen = true },
     closeDataSourceModal: (state) => { state.isDataSourceModalOpen = false },
@@ -88,8 +93,6 @@ const metadataLakehouseSlice = createSlice({
       state.isPowerBiModalOpen = true
     },
     closePowerBiModal: (state) => { state.isPowerBiModalOpen = false },
-    setCanvasTransform: (state, action: PayloadAction<CanvasTransform>) => { state.canvasTransform = action.payload },
-    resetCanvasTransform: (state) => { state.canvasTransform = { scale: 1, offsetX: 0, offsetY: 0 } },
     updateStageCode: (state, action: PayloadAction<CodeModificationPayload>) => {
       const { nodeId, newCode, droppedColumns } = action.payload
       if (state.codeOverrides[nodeId]) {
@@ -147,8 +150,6 @@ export const {
   closeCodeDrawer,
   openPowerBiModal,
   closePowerBiModal,
-  setCanvasTransform,
-  resetCanvasTransform,
   updateStageCode,
   resetStageCode,
   setCustomRawRecords,

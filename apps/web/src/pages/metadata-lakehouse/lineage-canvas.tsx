@@ -1,20 +1,18 @@
-import { useMemo, useRef } from "react"
+import { useMemo, useRef, useState } from "react"
 import { motion } from "framer-motion"
-import { MinusIcon, PlusIcon, RotateCcwIcon } from "lucide-react"
 
-import { Button } from "@workspace/ui/components/button"
+import { cn } from "@workspace/ui/lib/utils"
 
 import { LineageEdgeLayer } from "./lineage-edge-layer"
 import { LineageNodeComponent } from "./lineage-node"
+import { portOffsets } from "./lineage-ports"
 import type { LineageNode } from "./lineage-types"
 import { getVendorLineageConfig } from "./vendor-lineage-configs"
 import { selectVendors } from "@/store/vendors-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
   openPowerBiModal,
-  resetCanvasTransform,
   selectMetadataLakehouse,
-  setCanvasTransform,
   setHoveredNode,
   toggleAnomalySimulation,
 } from "@/store/metadata-lakehouse-slice"
@@ -25,17 +23,57 @@ const START_Y = 70
 
 export function LineageCanvas() {
   const dispatch = useAppDispatch()
-  const { nodes, edges, activeHoverNeighborMap: neighborMap, canvasTransform: transform, selectedNodeId, selectedVendorId } =
+  const { nodes, edges, activeHoverNeighborMap: neighborMap, selectedNodeId, selectedVendorId } =
     useAppSelector(selectMetadataLakehouse)
   const vendors = useAppSelector(selectVendors)
   const vendorName = vendors.find((v) => v.vendor_id === selectedVendorId)?.name ?? selectedVendorId
   const vendorConfig = useMemo(() => getVendorLineageConfig(selectedVendorId, vendorName), [selectedVendorId, vendorName])
 
   const canvasRef = useRef<HTMLDivElement>(null)
+  const panStateRef = useRef<{ startX: number; startY: number; startScrollLeft: number; startScrollTop: number } | null>(null)
+  const [isPanning, setIsPanning] = useState(false)
+
+  function handleCanvasPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return
+    if ((e.target as HTMLElement).closest('[data-lineage-node="true"]')) return
+    const el = canvasRef.current
+    if (!el) return
+    panStateRef.current = { startX: e.clientX, startY: e.clientY, startScrollLeft: el.scrollLeft, startScrollTop: el.scrollTop }
+    setIsPanning(true)
+    el.setPointerCapture(e.pointerId)
+  }
+
+  function handleCanvasPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const pan = panStateRef.current
+    const el = canvasRef.current
+    if (!pan || !el) return
+    el.scrollLeft = pan.startScrollLeft - (e.clientX - pan.startX)
+    el.scrollTop = pan.startScrollTop - (e.clientY - pan.startY)
+  }
+
+  function handleCanvasPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!panStateRef.current) return
+    panStateRef.current = null
+    setIsPanning(false)
+    canvasRef.current?.releasePointerCapture(e.pointerId)
+  }
+
   const sourceNodeIds = useMemo(
     () => Object.values(nodes).filter((n) => n.category === "source").map((n) => n.id).sort(),
     [nodes]
   )
+
+  const incomingPortCount = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const edge of edges) counts[edge.targetNodeId] = (counts[edge.targetNodeId] ?? 0) + 1
+    return counts
+  }, [edges])
+
+  const outgoingPortCount = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const edge of edges) counts[edge.sourceNodeId] = (counts[edge.sourceNodeId] ?? 0) + 1
+    return counts
+  }, [edges])
 
   const nodePositions = useMemo(() => {
     const pos: Record<string, { x: number; y: number; width: number; height: number }> = {}
@@ -80,30 +118,20 @@ export function LineageCanvas() {
     }
   }
 
-  function handleZoomIn() {
-    dispatch(setCanvasTransform({ ...transform, scale: Math.min(transform.scale + 0.1, 1.4) }))
-  }
-  function handleZoomOut() {
-    dispatch(setCanvasTransform({ ...transform, scale: Math.max(transform.scale - 0.1, 0.6) }))
-  }
-
   return (
     <div
       ref={canvasRef}
-      className="relative flex-1 w-full overflow-auto rounded-2xl border border-border bg-card/40 backdrop-blur-xs shadow-inner select-none"
+      onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handleCanvasPointerMove}
+      onPointerUp={handleCanvasPointerUp}
+      onPointerLeave={handleCanvasPointerUp}
+      className={cn(
+        "relative flex-1 w-full overflow-auto rounded-2xl border border-border bg-card/40 backdrop-blur-xs shadow-inner select-none p-8",
+        isPanning ? "cursor-grabbing" : "cursor-grab"
+      )}
       style={{ backgroundImage: "radial-gradient(circle, rgba(112, 48, 177, 0.12) 1.2px, transparent 1.2px)", backgroundSize: "22px 22px" }}
     >
-      <div className="sticky top-4 right-4 z-20 float-right mr-4 flex items-center gap-1.5 rounded-xl border border-border bg-card/90 p-1.5 shadow-md backdrop-blur-md">
-        <Button size="xs" variant="ghost" onClick={handleZoomIn} title="Zoom In"><PlusIcon className="size-3.5" /></Button>
-        <Button size="xs" variant="ghost" onClick={handleZoomOut} title="Zoom Out"><MinusIcon className="size-3.5" /></Button>
-        <span className="px-1 text-[11px] font-mono text-muted-foreground">{Math.round(transform.scale * 100)}%</span>
-        <Button size="xs" variant="ghost" onClick={() => dispatch(resetCanvasTransform())} title="Reset View"><RotateCcwIcon className="size-3" /></Button>
-      </div>
-
-      <motion.div
-        className="relative min-w-[2520px] min-h-[620px] p-8"
-        style={{ transform: `scale(${transform.scale}) translate(${transform.offsetX}px, ${transform.offsetY}px)`, transformOrigin: "top left", transition: "transform 0.15s ease-out" }}
-      >
+      <motion.div className="relative min-w-[2520px] min-h-[620px]">
         <div className="absolute top-4 left-0 right-0 h-14 pointer-events-none">
           <div style={{ left: "36px", width: "238px" }} className="absolute top-0 flex items-center justify-between px-3 py-2 rounded-xl border border-border/80 bg-muted/40 backdrop-blur-xs shadow-xs pointer-events-auto">
             <div className="min-w-0 mr-2">
@@ -117,7 +145,7 @@ export function LineageCanvas() {
 
           <div style={{ left: "340px", width: "238px" }} className="absolute top-0 flex items-center justify-between px-3 py-2 rounded-xl border border-border/80 bg-muted/40 backdrop-blur-xs shadow-xs pointer-events-auto">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">LEVEL 2: ANOMALY AGENT</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">LEVEL 2: ANOMALIX AGENT</span>
               <p className="text-xs font-bold text-foreground">Pre-ETL Anomaly Gate</p>
             </div>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">4 Detectors</span>
@@ -125,31 +153,28 @@ export function LineageCanvas() {
 
           <div style={{ left: "644px", width: "238px" }} className="absolute top-0 flex items-center justify-between px-3 py-2 rounded-xl border border-border/80 bg-muted/40 backdrop-blur-xs shadow-xs pointer-events-auto">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">LEVEL 3: QUALITY AGENT</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">LEVEL 3: QA AGENT</span>
               <p className="text-xs font-bold text-foreground">Integrity Rules Gate</p>
             </div>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">4 Dimensions</span>
           </div>
 
-          <div style={{ left: "948px", width: "1132px" }} className="absolute top-0 flex items-center justify-between px-4 py-2 rounded-xl border border-primary/40 bg-primary/5 backdrop-blur-xs shadow-xs pointer-events-auto">
-            <div className="flex items-center gap-3">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">LEVEL 4: ETL PIPELINE (HORIZONTAL QUEUE)</span>
-                <p className="text-xs font-bold text-foreground">{vendorConfig.pipelineTitle}</p>
-              </div>
-              <span className="text-muted-foreground/40">|</span>
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-                {(["etl-s1", "etl-s2", "etl-s3", "etl-s4"] as const).map((id, i) => (
-                  <span key={id} className="flex items-center gap-1.5">
-                    {i > 0 && <span>&rarr;</span>}
-                    <span className="px-1.5 py-0.5 rounded bg-card border border-border text-foreground font-semibold">
-                      S{i + 1}: {nodes[id]?.title ?? "..."}
-                    </span>
-                  </span>
-                ))}
-              </div>
+          <div style={{ left: "948px", width: "1132px" }} className="absolute top-0 flex items-center gap-3 px-4 py-2 rounded-xl border border-primary/40 bg-primary/5 backdrop-blur-xs shadow-xs pointer-events-auto">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary">LEVEL 4: ETL AGENT</span>
+              <p className="text-xs font-bold text-foreground">{vendorConfig.pipelineTitle}</p>
             </div>
-            <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">{vendorConfig.pipelineCode}</span>
+            <span className="text-muted-foreground/40">|</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+              {(["etl-s1", "etl-s2", "etl-s3", "etl-s4"] as const).map((id, i) => (
+                <span key={id} className="flex items-center gap-1.5">
+                  {i > 0 && <span>&rarr;</span>}
+                  <span className="px-1.5 py-0.5 rounded bg-card border border-border text-foreground font-semibold">
+                    S{i + 1}: {nodes[id]?.title ?? "..."}
+                  </span>
+                </span>
+              ))}
+            </div>
           </div>
 
           <div style={{ left: "2150px", width: "238px" }} className="absolute top-0 flex items-center justify-between px-3 py-2 rounded-xl border border-border/80 bg-muted/40 backdrop-blur-xs shadow-xs pointer-events-auto">
@@ -177,6 +202,8 @@ export function LineageCanvas() {
                   isHighlighted={neighborMap.highlightedNodeIds.includes(node.id)}
                   isDimmed={neighborMap.dimmedNodeIds.includes(node.id)}
                   isSelected={selectedNodeId === node.id}
+                  inPortOffsets={portOffsets(incomingPortCount[node.id] ?? 0)}
+                  outPortOffsets={portOffsets(outgoingPortCount[node.id] ?? 0)}
                   onSelectNode={handleNodeClick}
                   onHoverStart={(id) => dispatch(setHoveredNode(id))}
                   onHoverEnd={() => dispatch(setHoveredNode(null))}
