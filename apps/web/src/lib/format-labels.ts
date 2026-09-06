@@ -7,6 +7,15 @@ export function humanizeSnake(value: string) {
     .join(" ")
 }
 
+// ETL attempt error_message is a full Python traceback -- the last non-empty
+// line is the actual exception (e.g. "KeyError: 'REGION'"), which is what's
+// worth surfacing inline; the rest is only useful in the full analysis view.
+export function lastErrorLine(errorMessage: string | null | undefined): string | null {
+  if (!errorMessage) return null
+  const lines = errorMessage.trim().split("\n").filter((line) => line.trim().length > 0)
+  return lines.length > 0 ? lines[lines.length - 1]!.trim() : null
+}
+
 export const RUN_STATUS_VARIANT: Record<string, StatusChipVariant> = {
   running: "low",
   awaiting_anomaly_approval: "medium",

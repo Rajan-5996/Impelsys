@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { SparklesIcon, WrenchIcon } from "lucide-react"
+import { Loader2Icon, SparklesIcon, WrenchIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -101,21 +101,37 @@ export function EtlRetryPanel({
 
 export function EtlRetryDialogBody({ runId }: { runId: string }) {
   const dispatch = useAppDispatch()
+  const [isFinalizing, setIsFinalizing] = useState(false)
 
-  function handleDecided(result: { run_id: string; status: string }) {
-    dispatch(fetchActiveRun(runId))
-    if (result.status !== "awaiting_retry") dispatch(closeDrawer())
+  async function handleDecided(result: { run_id: string; status: string }) {
+    if (result.status === "awaiting_retry") {
+      dispatch(fetchActiveRun(runId))
+      return
+    }
+    // Wait for the refreshed run to actually land before closing -- closing
+    // immediately (dispatch without awaiting) used to reveal the page behind
+    // this dialog still showing stale data for the few seconds the refetch
+    // took, reading as a frozen/blank screen.
+    setIsFinalizing(true)
+    await dispatch(fetchActiveRun(runId))
+    dispatch(closeDrawer())
   }
 
   return (
-    <DialogContent size="huge">
+    <DialogContent size="huge" showCloseButton={!isFinalizing}>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <SparklesIcon className="size-4 text-primary" />
           FlowFix Agent Analysis
         </DialogTitle>
       </DialogHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+      <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+        {isFinalizing && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-card/85 backdrop-blur-xs">
+            <Loader2Icon className="size-6 animate-spin text-primary" />
+            <p className="text-xs font-medium text-muted-foreground">Applying the fix and refreshing this run...</p>
+          </div>
+        )}
         <div>
           <EtlFailureAnalysisContent runId={runId} />
         </div>

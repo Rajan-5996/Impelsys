@@ -6,10 +6,10 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@workspace
 
 import { EmptyState } from "@/components/empty-state"
 import { StatusChip } from "@/components/status-chip"
-import { ANOMALY_TYPE_LABEL } from "@/lib/anomaly-labels"
-import { formatDetailEntries, formatTimestamp, humanizeSnake } from "@/lib/format-labels"
+import { humanizeSnake, lastErrorLine } from "@/lib/format-labels"
 import { TERMINAL_STATUSES } from "@/lib/stage-visual"
 import { AnomalyDecisionDialog, type PendingDecision } from "@/pages/incidents/anomaly-decision-dialog"
+import { ActionItemRow, PendingAnomalyRow } from "@/pages/pipeline/pipeline-action-item-rows"
 import {
   decideAnomaly,
   fetchAnomalies,
@@ -18,6 +18,7 @@ import {
   selectAnomaliesStatus,
 } from "@/store/anomalies-slice"
 import { fetchEtlAdvisory, selectEtlAdvisory } from "@/store/etl-advisory-slice"
+import { fetchEtlAttempts, selectEtlAttempts } from "@/store/etl-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { fetchActiveRun } from "@/store/run-flow-slice"
 import { openDrawer, pushToast } from "@/store/ui-slice"
@@ -36,6 +37,7 @@ export function PipelineActionItems({
   const status = useAppSelector(selectAnomaliesStatus)
   const error = useAppSelector(selectAnomaliesError)
   const advisory = useAppSelector(selectEtlAdvisory(runId ?? ""))
+  const attempts = useAppSelector(selectEtlAttempts(runId ?? ""))
   const [decision, setDecision] = useState<PendingDecision | null>(null)
   const [retryTick, setRetryTick] = useState(0)
   const [approvingAll, setApprovingAll] = useState(false)
@@ -49,6 +51,10 @@ export function PipelineActionItems({
   // surface that prior advisory context alongside the fix review either way.
   useEffect(() => {
     if (runId) dispatch(fetchEtlAdvisory(runId))
+  }, [dispatch, runId, runStatus])
+
+  useEffect(() => {
+    if (runId) dispatch(fetchEtlAttempts(runId))
   }, [dispatch, runId, runStatus])
 
   useEffect(() => {
@@ -74,6 +80,15 @@ export function PipelineActionItems({
   const awaitingRetry = !isTerminal && runStatus === "awaiting_retry"
   const awaitingDq = !isTerminal && runStatus === "awaiting_dq_approval"
   const awaitingAdvisory = !isTerminal && runStatus === "awaiting_advisory_approval"
+  // FlowFix Agent's correction is worth showing for the rest of this run's
+  // life, not just while it's still "awaiting_retry" or freshly exhausted --
+  // whether the run went on to self-heal successfully or gave up for good,
+  // the correction it tried (and why) is real diagnostic history that
+  // shouldn't disappear the moment the run's status moves on.
+  const lastFailedAttempt = [...(attempts?.data ?? [])].reverse().find((attempt) => attempt.status === "failed")
+  const hasFailedAttempt = !!lastFailedAttempt
+  const showCorrectionHistory = !awaitingRetry && hasFailedAttempt
+  const lastEtlError = lastErrorLine(lastFailedAttempt?.error_message)
   const totalCount =
     isTerminal
       ? 0
@@ -84,7 +99,7 @@ export function PipelineActionItems({
 
   // Nothing awaiting approval and nothing to report -- don't show an empty
   // container for it, just like the data-quality and output-files sections.
-  if (!isLoading && !isFailed && totalCount === 0) return null
+  if (!isLoading && !isFailed && totalCount === 0 && !showCorrectionHistory) return null
 
   async function handleApproveAll() {
     setApprovingAll(true)
@@ -133,123 +148,89 @@ export function PipelineActionItems({
           <div className="h-24 animate-pulse rounded-md bg-muted/40" />
         ) : (
           <>
+            {showCorrectionHistory ? (
+              <ActionItemRow
+                variant={runStatus === "failed_max_retries" ? "critical" : "neutral"}
+                toneClass={
+                  runStatus === "failed_max_retries"
+                    ? "border-status-critical/25 bg-status-critical/10"
+                    : "border-border bg-muted/20"
+                }
+                badge={runStatus === "failed_max_retries" ? "Failed Max Retries" : "FlowFix Agent"}
+                title={
+                  runStatus === "failed_max_retries"
+                    ? "FlowFix Agent Couldn't Fix This Run"
+                    : "FlowFix Agent Corrected This Run"
+                }
+                description={
+                  runStatus === "failed_max_retries"
+                    ? (runMessage ?? "FlowFix Agent tried its correction and the run still failed -- see what it attempted below.")
+                    : "An ETL attempt failed earlier in this run and FlowFix Agent applied a correction -- see what it changed."
+                }
+                errorDetail={lastEtlError}
+                actionLabel="View Agent's Correction"
+                actionIcon={WrenchIcon}
+                actionVariant="outline"
+                onAction={() => dispatch(openDrawer({ type: "etl-failure-analysis", runId }))}
+              />
+            ) : null}
             {awaitingRetry ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-status-warning/25 bg-status-warning/10 p-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusChip variant="medium">Fix Pending</StatusChip>
-                    <span className="text-[12.5px] font-semibold text-foreground">
-                      FlowFix Agent Needs Your Review
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {runMessage ?? "ETL failed and needs review before the fix can be applied."}
-                  </p>
-                </div>
-                <Button
-                  size="xs"
-                  onClick={() => dispatch(openDrawer({ type: "etl-retry", runId }))}
-                >
-                  <WrenchIcon /> Review Agent's Fix
-                </Button>
-              </div>
+              <ActionItemRow
+                variant="medium"
+                toneClass="border-status-warning/25 bg-status-warning/10"
+                badge="Fix Pending"
+                title="FlowFix Agent Needs Your Review"
+                description={runMessage ?? "ETL failed and needs review before the fix can be applied."}
+                errorDetail={lastEtlError}
+                actionLabel="Review Agent's Fix"
+                actionIcon={WrenchIcon}
+                onAction={() => dispatch(openDrawer({ type: "etl-retry", runId }))}
+              />
             ) : null}
             {awaitingRetry && advisory?.data?.exists ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusChip variant="neutral">Advisory Agent</StatusChip>
-                    <span className="text-[12.5px] font-semibold text-foreground">
-                      Earlier Advisory Findings for This Run
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {advisory.data.warnings.length} warning
-                    {advisory.data.warnings.length === 1 ? "" : "s"} flagged before ETL ran &middot;{" "}
-                    {humanizeSnake(advisory.data.status)}
-                  </p>
-                </div>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => dispatch(openDrawer({ type: "etl-advisory", runId }))}
-                >
-                  <FlaskConicalIcon /> View Advisory
-                </Button>
-              </div>
+              <ActionItemRow
+                variant="neutral"
+                toneClass="border-border bg-muted/20"
+                badge="Advisory Agent"
+                title="Earlier Advisory Findings for This Run"
+                description={`${advisory.data.warnings.length} warning${advisory.data.warnings.length === 1 ? "" : "s"} flagged before ETL ran · ${humanizeSnake(advisory.data.status)}`}
+                actionLabel="View Advisory"
+                actionIcon={FlaskConicalIcon}
+                actionVariant="outline"
+                onAction={() => dispatch(openDrawer({ type: "etl-advisory", runId }))}
+              />
             ) : null}
             {awaitingDq ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-status-warning/25 bg-status-warning/10 p-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusChip variant="medium">Awaiting DQ Approval</StatusChip>
-                    <span className="text-[12.5px] font-semibold text-foreground">
-                      Data Quality Score Needs Review
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {runMessage ?? "Quality score is below threshold and needs approval before ETL runs."}
-                  </p>
-                </div>
-                <Button size="xs" onClick={() => dispatch(openDrawer({ type: "quality-check", runId }))}>
-                  <ShieldAlertIcon /> Review &amp; Decide
-                </Button>
-              </div>
+              <ActionItemRow
+                variant="medium"
+                toneClass="border-status-warning/25 bg-status-warning/10"
+                badge="Awaiting DQ Approval"
+                title="Data Quality Score Needs Review"
+                description={runMessage ?? "Quality score is below threshold and needs approval before ETL runs."}
+                actionLabel="Review & Decide"
+                actionIcon={ShieldAlertIcon}
+                onAction={() => dispatch(openDrawer({ type: "quality-check", runId }))}
+              />
             ) : null}
             {awaitingAdvisory ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-status-warning/25 bg-status-warning/10 p-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusChip variant="medium">Awaiting Advisory Approval</StatusChip>
-                    <span className="text-[12.5px] font-semibold text-foreground">
-                      Stage 4 Advisory Warning Needs Review
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {runMessage ?? "The advisory agent flagged the incoming data and needs approval before ETL resumes."}
-                  </p>
-                </div>
-                <Button size="xs" onClick={() => dispatch(openDrawer({ type: "etl-advisory", runId }))}>
-                  <FlaskConicalIcon /> Review &amp; Decide
-                </Button>
-              </div>
+              <ActionItemRow
+                variant="medium"
+                toneClass="border-status-warning/25 bg-status-warning/10"
+                badge="Awaiting Advisory Approval"
+                title="PreFlight Agent Flagged a Risk"
+                description={runMessage ?? "PreFlight Agent flagged something in the incoming data -- take a look before the run continues."}
+                actionLabel="Review & Decide"
+                actionIcon={FlaskConicalIcon}
+                onAction={() => dispatch(openDrawer({ type: "etl-advisory", runId }))}
+              />
             ) : null}
             {pending.map((anomaly) => (
-              <div
+              <PendingAnomalyRow
                 key={anomaly.anomaly_id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-status-warning/25 bg-status-warning/10 p-3"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusChip variant="medium">Pending</StatusChip>
-                    <span className="text-[12.5px] font-semibold text-foreground">
-                      {ANOMALY_TYPE_LABEL[anomaly.anomaly_type] ?? anomaly.anomaly_type}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {formatDetailEntries(anomaly.details)}
-                  </p>
-                  <p className="mt-0.5 text-[10.5px] text-muted-foreground">
-                    Detected {formatTimestamp(anomaly.created_at)} &middot; Precedent:{" "}
-                    {anomaly.has_precedent ? "Yes" : "No"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    size="xs"
-                    onClick={() => setDecision({ anomalyId: anomaly.anomaly_id, approve: true })}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="destructive"
-                    onClick={() => setDecision({ anomalyId: anomaly.anomaly_id, approve: false })}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </div>
+                anomaly={anomaly}
+                onApprove={() => setDecision({ anomalyId: anomaly.anomaly_id, approve: true })}
+                onReject={() => setDecision({ anomalyId: anomaly.anomaly_id, approve: false })}
+              />
             ))}
           </>
         )}

@@ -122,7 +122,7 @@ export function AppSidebar() {
                 className="flex min-w-0 flex-col overflow-hidden"
               >
                 <span className="text-[11px] leading-tight font-medium tracking-wide text-sidebar-foreground uppercase break-words">
-                  GWC Data Operations Platform
+                  GWC Agentic Data Operations Platform
                 </span>
               </motion.div>
             ) : null}

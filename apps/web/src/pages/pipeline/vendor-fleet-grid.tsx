@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { EmptyState } from "@/components/empty-state"
+import { MarkdownText } from "@/components/markdown-text"
 import { StageFlow } from "@/components/stage-flow"
 import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { runStatusLabel } from "@/lib/format-labels"
@@ -107,9 +108,9 @@ export function VendorFleetGrid({
                     </StatusText>
                   </span>
                 </div>
-                <p className="line-clamp-2 min-h-[2.5em] text-[11px] text-muted-foreground">
+                <MarkdownText className="text-[11px] text-muted-foreground">
                   {vendor.ai_summary}
-                </p>
+                </MarkdownText>
                 <div className="flex flex-col gap-1.5 border-t border-dashed border-border pt-2.5">
                   <span className="text-[9px] font-semibold tracking-wide text-muted-foreground/70 uppercase">
                     Connectors

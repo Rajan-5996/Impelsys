@@ -12,6 +12,11 @@ import databricksLogo from "@/assets/databricks.png"
 import snowflakeLogo from "@/assets/snowflake.png"
 import dbtLogo from "@/assets/DBT.png"
 import salesforceLogo from "@/assets/salesforce.png"
+import ibmDb2Logo from "@/assets/IBM.png"
+import airflowLogo from "@/assets/air-flow.png"
+import redshiftLogo from "@/assets/redshift.png"
+import postgresLogo from "@/assets/postgres.png"
+import treasureDataLogo from "@/assets/treasure.png"
 
 export type ConnectorTint = "primary" | "standard" | "accent"
 
@@ -184,6 +189,71 @@ export const CONNECTORS: Connector[] = [
     owner: "Supplier Operations",
     lastSync: "Never",
     logo: salesforceLogo,
+    tint: "primary",
+  },
+  {
+    id: "db2",
+    name: "IBM Db2",
+    category: "Database",
+    description: "Legacy transactional data synced into the pipeline for migration and validation.",
+    detail:
+      "Db2 remains the system of record for several core transactional tables. The intake agent reads change-data-capture feeds from here so the as-is data stays in lockstep with what's already curated downstream during the modernization journey.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: ibmDb2Logo,
+    tint: "primary",
+  },
+  {
+    id: "airflow",
+    name: "Apache Airflow",
+    category: "Orchestration",
+    description: "Existing DAG schedules and run history correlated with agent-triggered jobs.",
+    detail:
+      "Airflow's DAG run history and scheduling metadata are read here so the ETL Resolution Agent can correlate a legacy-orchestrated job failure with the same incident it already tracks, instead of treating Airflow and agent-driven pipelines as two disconnected systems.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: airflowLogo,
+    tint: "standard",
+  },
+  {
+    id: "redshift",
+    name: "Amazon Redshift",
+    category: "Data Warehouse",
+    description: "Curated tables loaded into the existing enterprise warehouse.",
+    detail:
+      "Once data clears quality and governance checks, curated tables are loaded into Redshift so existing BI tools and analysts keep querying the same warehouse they already trust, with no disruption during the transformation journey.",
+    status: "Not Connected",
+    owner: "Data Governance",
+    lastSync: "Never",
+    logo: redshiftLogo,
+    tint: "accent",
+  },
+  {
+    id: "postgresql",
+    name: "PostgreSQL",
+    category: "Database",
+    description: "Operational and reference data read for enrichment and validation.",
+    detail:
+      "Reference and operational tables in PostgreSQL are read here to enrich incoming supplier records and validate them against established master data before curated output moves downstream.",
+    status: "Not Connected",
+    owner: "DataOps Engineering",
+    lastSync: "Never",
+    logo: postgresLogo,
+    tint: "standard",
+  },
+  {
+    id: "treasure-data",
+    name: "Treasure Data",
+    category: "Customer Data Platform",
+    description: "Audience and event data synced for cross-system data quality checks.",
+    detail:
+      "Audience, visitor, and exhibitor event data managed in Treasure Data is brought in here so the Data Quality Agent can extend its checks and supplier scoring to the customer data platform side of the business, not just the ETL pipelines.",
+    status: "Not Connected",
+    owner: "Data Governance",
+    lastSync: "Never",
+    logo: treasureDataLogo,
     tint: "primary",
   },
 ]

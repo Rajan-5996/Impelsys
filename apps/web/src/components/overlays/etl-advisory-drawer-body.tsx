@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { AlertTriangleIcon, Loader2Icon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { DialogContent, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog"
@@ -13,7 +14,7 @@ import {
 } from "@/store/etl-advisory-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { fetchActiveRun } from "@/store/run-flow-slice"
-import { pushToast } from "@/store/ui-slice"
+import { closeDrawer, pushToast } from "@/store/ui-slice"
 
 const DECISION_STATUS_VARIANT: Record<string, StatusChipVariant> = {
   approved: "ok",
@@ -42,7 +43,11 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
           approve ? "success" : "warn"
         )
       )
-      dispatch(fetchActiveRun(runId))
+      // Await the refetch before closing -- closing right away used to leave
+      // the page behind this dialog showing stale data for the few seconds
+      // the refetch took (same bug fixed in etl-retry-drawer-body.tsx).
+      await dispatch(fetchActiveRun(runId))
+      if (approve) dispatch(closeDrawer())
     } catch (error) {
       dispatch(pushToast(typeof error === "string" ? error : "Failed to submit decision.", "warn"))
     } finally {
@@ -54,7 +59,7 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
     return (
       <DialogContent size="huge">
         <DialogHeader>
-          <DialogTitle>Stage 4 Advisory Review</DialogTitle>
+          <DialogTitle>PreFlight Agent Review</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 p-6">
           <div className="h-24 animate-pulse rounded-md bg-muted/40" />
@@ -68,14 +73,14 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
     return (
       <DialogContent size="huge">
         <DialogHeader>
-          <DialogTitle>Stage 4 Advisory Review</DialogTitle>
+          <DialogTitle>PreFlight Agent Review</DialogTitle>
         </DialogHeader>
         <div className="p-6">
           <EmptyState
             message={
               advisory.status === "failed"
                 ? (advisory.error ?? "Failed to load advisory review for this run.")
-                : "The advisory agent found nothing to flag for this run -- no review needed."
+                : "PreFlight Agent didn't find anything to flag for this run -- no review needed."
             }
           />
         </div>
@@ -86,11 +91,17 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
   const data = advisory.data
 
   return (
-    <DialogContent size="huge">
+    <DialogContent size="huge" showCloseButton={!deciding}>
       <DialogHeader>
-        <DialogTitle>Stage 4 Advisory Review</DialogTitle>
+        <DialogTitle>PreFlight Agent Review</DialogTitle>
       </DialogHeader>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
+      <div className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
+        {deciding && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-card/85 backdrop-blur-xs">
+            <Loader2Icon className="size-6 animate-spin text-primary" />
+            <p className="text-xs font-medium text-muted-foreground">Submitting your decision and refreshing this run...</p>
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <span className="text-[11.5px] font-semibold text-foreground">{runId}</span>
           <div className="flex flex-wrap items-center gap-2">
@@ -105,9 +116,9 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
         </div>
 
         <p className="text-[10.5px] leading-relaxed text-muted-foreground">
-          The advisory agent found something in the ingested data that could break the ETL
-          script or its output validation. Approving resumes the withheld attempt as-is --
-          the advisory agent only warns, it never modifies the data.
+          PreFlight Agent spotted something in the incoming data that could break this run
+          or its output. Approving lets the run continue as-is -- PreFlight Agent only
+          warns you here, it never changes the data itself.
         </p>
 
         {data.status === "pending" ? (
@@ -131,8 +142,13 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
           </div>
         ) : null}
 
-        <div className="border-t border-dashed border-border pt-4">
-          <p className="mb-1.5 text-[11px] font-semibold text-foreground">Warnings</p>
+        <div className="rounded-xl border border-status-warning/30 bg-status-warning/10 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-status-warning/20 text-status-warning-foreground">
+              <AlertTriangleIcon className="size-3.5" />
+            </span>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground">Warnings</p>
+          </div>
           <ul className="list-disc space-y-1.5 pl-4 text-[11.5px] leading-relaxed text-muted-foreground">
             {data.warnings.map((warning, index) => (
               <li key={index}>{warning}</li>
