@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { AlertTriangleIcon, Loader2Icon } from "lucide-react"
+import { AlertTriangleIcon, Loader2Icon, PauseIcon, PlayIcon, XIcon } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
 import { DialogContent, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog"
@@ -7,13 +7,14 @@ import { DialogContent, DialogHeader, DialogTitle } from "@workspace/ui/componen
 import { EmptyState } from "@/components/empty-state"
 import { StatusText, type StatusChipVariant } from "@/components/status-chip"
 import { humanizeSnake } from "@/lib/format-labels"
+import { PipelineCancelDialog } from "@/pages/pipeline/pipeline-run-flow-overlays"
 import {
   decideAdvisory,
   fetchEtlAdvisory,
   selectEtlAdvisory,
 } from "@/store/etl-advisory-slice"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchActiveRun } from "@/store/run-flow-slice"
+import { cancelRun, fetchActiveRun, pauseRun, resumeRun } from "@/store/run-flow-slice"
 import { closeDrawer, pushToast } from "@/store/ui-slice"
 
 const DECISION_STATUS_VARIANT: Record<string, StatusChipVariant> = {
@@ -26,10 +27,48 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
   const dispatch = useAppDispatch()
   const advisory = useAppSelector(selectEtlAdvisory(runId))
   const [deciding, setDeciding] = useState(false)
+  const [runActionBusy, setRunActionBusy] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   useEffect(() => {
     dispatch(fetchEtlAdvisory(runId))
   }, [dispatch, runId])
+
+  async function handlePauseToggle() {
+    setRunActionBusy(true)
+    try {
+      if (isPaused) {
+        await dispatch(resumeRun({ runId })).unwrap()
+        setIsPaused(false)
+        dispatch(pushToast("Run resumed.", "success"))
+      } else {
+        await dispatch(pauseRun({ runId })).unwrap()
+        setIsPaused(true)
+        dispatch(pushToast("Pause requested -- takes effect after the current stage.", "info"))
+      }
+      dispatch(fetchActiveRun(runId))
+    } catch (error) {
+      dispatch(pushToast(typeof error === "string" ? error : "Action failed.", "warn"))
+    } finally {
+      setRunActionBusy(false)
+    }
+  }
+
+  async function handleCancelConfirm() {
+    setRunActionBusy(true)
+    try {
+      await dispatch(cancelRun({ runId })).unwrap()
+      dispatch(pushToast("Run cancelled.", "success"))
+      dispatch(fetchActiveRun(runId))
+      dispatch(closeDrawer())
+    } catch (error) {
+      dispatch(pushToast(typeof error === "string" ? error : "Cancel failed.", "warn"))
+    } finally {
+      setRunActionBusy(false)
+      setCancelOpen(false)
+    }
+  }
 
   async function handleDecide(approve: boolean) {
     setDeciding(true)
@@ -92,8 +131,28 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
 
   return (
     <DialogContent size="huge" showCloseButton={!deciding}>
-      <DialogHeader>
+      <DialogHeader className="flex-row items-center justify-between">
         <DialogTitle>PreFlight Agent Review</DialogTitle>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="xs" onClick={handlePauseToggle} disabled={runActionBusy || deciding}>
+            {isPaused ? <PlayIcon /> : <PauseIcon />}
+            {isPaused ? "Continue" : "Pause"}
+          </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => setCancelOpen(true)}
+            disabled={runActionBusy || deciding}
+            className="border-0 text-status-critical-foreground hover:brightness-110"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--color-status-critical), color-mix(in oklab, var(--color-status-critical) 65%, black))",
+            }}
+          >
+            <XIcon />
+            Cancel
+          </Button>
+        </div>
       </DialogHeader>
       <div className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
         {deciding && (
@@ -156,6 +215,12 @@ export function EtlAdvisoryDialogBody({ runId }: { runId: string }) {
           </ul>
         </div>
       </div>
+      <PipelineCancelDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        onConfirm={handleCancelConfirm}
+        busy={runActionBusy}
+      />
     </DialogContent>
   )
 }

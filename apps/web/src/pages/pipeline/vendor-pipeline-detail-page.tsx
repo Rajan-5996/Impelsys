@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeftIcon } from "lucide-react"
 
@@ -29,6 +29,7 @@ export function VendorPipelineDetailPage() {
   const vendors = useAppSelector(selectVendors)
   const { runId, currentStage, status, message, streaming } = useAppSelector(selectRunFlow)
   const vendor = vendors.find((row) => row.vendor_id === vendorId)
+  const triggeredVendorId = useRef<string | null>(null)
 
   useEffect(() => {
     dispatch(fetchVendors())
@@ -36,6 +37,12 @@ export function VendorPipelineDetailPage() {
 
   useEffect(() => {
     if (!vendorId) return
+    // StrictMode intentionally double-invokes effects in dev, and this one
+    // isn't idempotent from the caller's side -- without this guard it fires
+    // /trigger twice in a row, and the backend's terminal-run check has a
+    // race that lets both requests each start their own new run.
+    if (triggeredVendorId.current === vendorId) return
+    triggeredVendorId.current = vendorId
 
     async function trigger() {
       const result = await dispatch(triggerVendor(vendorId!))

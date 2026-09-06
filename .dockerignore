@@ -1,0 +1,27 @@
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+**/.vite
+
+.git
+.gitignore
+
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+*.log
+npm-debug.log*
+
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# The Python backend is a separate deployable with its own Dockerfile/venv/DB
+# files -- excluding it keeps the frontend build context small and avoids
+# sending its secrets (private_key.pem, .env, *.duckdb) to the Docker daemon
+# for a build that never needs them.
+apps/server

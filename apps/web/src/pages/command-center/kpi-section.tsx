@@ -17,8 +17,8 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks"
 // (Agent Lifecycle, AI Agent Actions) instead of generic feed/supplier language.
 const KPI_DISPLAY_LABEL: Record<string, string> = {
   "Data Feeds Today": "Feeds Processed by Agents",
-  "Healthy Feeds": "AnomaliX Verified Feeds",
-  "Active Anomalies": "AnomaliX Flagged Anomalies",
+  "Healthy Feeds": "Agent Verified Feeds",
+  "Active Anomalies": "Agent Flagged Anomalies",
   "Open Incidents": "Agents Awaiting Approval",
   "Enterprise Data Quality": "DataGuard Quality Score",
   "Suppliers Within SLA": "Agent-Verified Suppliers",
